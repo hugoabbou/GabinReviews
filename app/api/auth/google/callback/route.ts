@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const BASE_URL = "https://next-js-starter-bevz.bolt.host";
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL!;
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

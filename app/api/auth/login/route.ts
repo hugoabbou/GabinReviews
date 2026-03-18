@@ -2,26 +2,29 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    const text = await req.text();
-    const { email, password } = JSON.parse(text);
-    
-    const validEmail = "hugoabbou@gmail.com";
-    const validPassword = "bonjour123";
-    
-    if (email !== validEmail || password !== validPassword) {
-      return NextResponse.json({ error: `401: got email=${email} pass=${password}` }, { status: 401 });
+    const { email, password } = await req.json();
+
+    const validEmail = process.env.ADMIN_EMAIL;
+    const validPassword = process.env.ADMIN_PASSWORD;
+
+    if (!validEmail || !validPassword) {
+      return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
     }
-    
+
+    if (email !== validEmail || password !== validPassword) {
+      return NextResponse.json({ error: "Identifiants incorrects" }, { status: 401 });
+    }
+
     const response = NextResponse.json({ success: true });
     response.cookies.set("reviewshub_session", "active", {
-      httpOnly: false,
-      secure: false,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });
     return response;
-  } catch (err) {
-    return NextResponse.json({ error: "Erreur: " + err }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
   }
 }

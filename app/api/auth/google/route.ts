@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const clientId = "589461069272-b24getneekbuhvoecb2koi336q99jkkj.apps.googleusercontent.com";
-  const redirectUri = "https://next-js-starter-bevz.bolt.host/api/auth/google/callback";
+  const clientId = process.env.GOOGLE_CLIENT_ID!;
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`;
 
   // Voici les adresses exactes que Google attend
   const scopes = [
