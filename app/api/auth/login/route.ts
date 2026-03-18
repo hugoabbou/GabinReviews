@@ -2,16 +2,16 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    const { email, password } = await req.json();
+    const { username, password } = await req.json();
 
-    const validEmail = process.env.ADMIN_EMAIL;
+    const validUsername = process.env.ADMIN_USERNAME;
     const validPassword = process.env.ADMIN_PASSWORD;
 
-    if (!validEmail || !validPassword) {
+    if (!validUsername || !validPassword) {
       return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
     }
 
-    if (email !== validEmail || password !== validPassword) {
+    if (username !== validUsername || password !== validPassword) {
       return NextResponse.json({ error: "Identifiants incorrects" }, { status: 401 });
     }
 
