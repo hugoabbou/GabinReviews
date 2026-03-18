@@ -1,0 +1,1136 @@
+"use client";
+
+import { useState, useEffect } from "react";
+
+
+
+type Review = {
+
+  id: string;
+
+  authorName: string;
+
+  initials: string;
+
+  avatarColor: string;
+
+  rating: number;
+
+  comment: string;
+
+  date: string;
+
+  answered: boolean;
+
+  establishmentId: string;
+
+};
+
+
+
+type Establishment = {
+
+  id: string;
+
+  name: string;
+
+  color: string;
+
+  avgRating: number;
+
+  total: number;
+
+  pending: number;
+
+};
+
+
+
+type Tone = "professionnel" | "empathique" | "concis";
+
+
+
+const ESTABLISHMENTS: Establishment[] = [
+
+  { id: "1", name: "Paris 8ème",     color: "#4f7cff", avgRating: 4.6, total: 248, pending: 2 },
+
+  { id: "2", name: "Lyon Centre",    color: "#22c55e", avgRating: 4.8, total: 182, pending: 1 },
+
+  { id: "3", name: "Bordeaux",       color: "#f59e0b", avgRating: 4.3, total: 134, pending: 0 },
+
+  { id: "4", name: "Nice Promenade", color: "#ec4899", avgRating: 4.7, total: 97,  pending: 0 },
+
+];
+
+
+
+const MOCK_REVIEWS: Review[] = [
+
+  { id: "r1", authorName: "Marc Alain",     initials: "MA", avatarColor: "#ef4444", rating: 1, answered: false, establishmentId: "1", date: "Il y a 4 min",  comment: "Service absolument déplorable. J'ai attendu 45 minutes pour être servi et personne ne s'est excusé. La qualité ne correspond pas au prix pratiqué. Je ne reviendrai jamais." },
+
+  { id: "r2", authorName: "Sophie Bernard", initials: "SB", avatarColor: "#22c55e", rating: 5, answered: false, establishmentId: "1", date: "Hier",           comment: "Expérience parfaite de bout en bout. L'équipe est aux petits soins, l'ambiance est chaleureuse. Je recommande vivement !" },
+
+  { id: "r3", authorName: "Thomas Dupont",  initials: "TD", avatarColor: "#4f7cff", rating: 4, answered: true,  establishmentId: "1", date: "Il y a 2 jours", comment: "Très bon dans l'ensemble. Quelques détails à améliorer sur les temps d'attente mais l'accueil est excellent." },
+
+  { id: "r4", authorName: "Julie Martin",   initials: "JM", avatarColor: "#a855f7", rating: 3, answered: false, establishmentId: "2", date: "Il y a 3 jours", comment: "Correct sans plus. Le personnel est sympa mais l'attente était un peu longue pour un mercredi midi." },
+
+  { id: "r5", authorName: "Pierre Leclerc", initials: "PL", avatarColor: "#06b6d4", rating: 5, answered: true,  establishmentId: "2", date: "Il y a 4 jours", comment: "Excellent comme toujours ! La meilleure adresse de Lyon sans hésitation." },
+
+  { id: "r6", authorName: "Camille Roux",   initials: "CR", avatarColor: "#f97316", rating: 2, answered: false, establishmentId: "3", date: "Il y a 5 jours", comment: "Déçue par cette visite. L'accueil était froid et les produits n'étaient pas frais." },
+
+];
+
+
+
+function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
+
+  return (
+
+    <span style={{ fontSize: size, color: "#fbbf24", letterSpacing: 1 }}>
+
+      {"★".repeat(rating)}{"☆".repeat(5 - rating)}
+
+    </span>
+
+  );
+
+}
+
+
+
+export default function ReviewsHub() {
+
+  const [establishments, setEstablishments] = useState<Establishment[]>(ESTABLISHMENTS);
+
+  const [selectedEtab, setSelectedEtab]     = useState("1");
+
+  const [reviews, setReviews]               = useState<Review[]>(MOCK_REVIEWS);
+
+  const [selectedReview, setSelectedReview] = useState<Review | null>(null);
+
+  const [filter, setFilter]                 = useState<"all" | "pending" | "negative">("all");
+
+  const [tone, setTone]                     = useState<Tone>("professionnel");
+
+  const [aiReply, setAiReply]               = useState("");
+
+  const [generating, setGenerating]         = useState(false);
+
+  const [apiKey, setApiKey]                 = useState("");
+
+  const [showApiModal, setShowApiModal]     = useState(false);
+
+  const [toast, setToast]                   = useState<{ msg: string; type: "error" | "success" | "info" } | null>(null);
+
+  const [published, setPublished]           = useState(false);
+
+  const [activeNav, setActiveNav]           = useState("dashboard");
+
+  const [sidebarOpen, setSidebarOpen]       = useState(false);
+
+  const [showPanel, setShowPanel]           = useState(false);
+
+  const [googleToken, setGoogleToken]       = useState("");
+
+  const [googleConnected, setGoogleConnected] = useState(false);
+
+
+
+  useEffect(() => {
+
+    // Récupère le token Google depuis l'URL après OAuth
+
+    const params = new URLSearchParams(window.location.search);
+
+    const token = params.get("google_token");
+
+    if (token) {
+
+      localStorage.setItem("google_access_token", token);
+
+      setGoogleToken(token);
+
+      setGoogleConnected(true);
+
+      window.history.replaceState({}, "", "/");
+
+      showToast("Google Business connecté ✓", "success");
+
+      // Charge les vrais avis
+
+      loadGoogleReviews(token);
+
+    } else {
+
+      // Vérifie si un token existe déjà
+
+      const saved = localStorage.getItem("google_access_token");
+
+      if (saved) {
+
+        setGoogleToken(saved);
+
+        setGoogleConnected(true);
+
+        loadGoogleReviews(saved);
+
+      }
+
+    }
+
+  }, []);
+
+
+
+ const loadGoogleReviews = async (token: string) => {
+
+  try {
+
+    // 1. Récupère les comptes
+
+    const accountsRes = await fetch("/api/reviews/gmb", {
+
+      headers: { "x-google-token": token },
+
+    });
+
+    const accountsData = await accountsRes.json();
+
+    if (!accountsData.accounts?.length) return;
+
+    const accountId = accountsData.accounts[0].name.split("/")[1];
+
+
+
+    // 2. Récupère les vrais établissements (Gabin, Côté Sushi...)
+
+    const locsRes = await fetch(`/api/reviews/gmb?accountId=${accountId}`, {
+
+      headers: { "x-google-token": token },
+
+    });
+
+    const locsData = await locsRes.json();
+
+
+
+    if (locsData.locations?.length) {
+
+      // On transforme les données Google pour ton interface
+
+      const realEtabs: Establishment[] = locsData.locations.map((loc: any, index: number) => ({
+
+        id: loc.name.split("/")[1], // On récupère l'ID réel
+
+        name: loc.title,           // <--- ICI : Gabin ou Côté Sushi
+
+        color: ["#4f7cff", "#22c55e", "#f59e0b", "#ec4899"][index % 4],
+
+        avgRating: loc.metadata?.mapsUri ? 4.5 : 0, // Note temporaire si non fournie
+
+        total: 0,
+
+        pending: 0
+
+      }));
+
+      
+
+      setEstablishments(realEtabs); // On remplace la liste fictive par la vraie
+
+      setSelectedEtab(realEtabs[0].id); // On sélectionne le premier par défaut
+
+      
+
+      // 3. Récupère les avis du premier établissement trouvé
+
+      const reviewsRes = await fetch(`/api/reviews/gmb?accountId=${accountId}&locationId=${realEtabs[0].id}`, {
+
+        headers: { "x-google-token": token },
+
+      });
+
+      const reviewsData = await reviewsRes.json();
+
+      if (reviewsData.reviews?.length) {
+        const googleReviews: Review[] = reviewsData.reviews.map((rev: any) => ({
+          id: rev.name,
+          authorName: rev.reviewer?.displayName || "Anonyme",
+          initials: (rev.reviewer?.displayName || "A").substring(0, 2).toUpperCase(),
+          avatarColor: ["#ef4444", "#22c55e", "#4f7cff", "#a855f7", "#06b6d4", "#f97316"][Math.floor(Math.random() * 6)],
+          rating: { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[rev.starRating as string] || 3,
+          comment: rev.reviewText || "",
+          date: rev.createTime ? new Date(rev.createTime).toLocaleDateString("fr-FR") : "Date inconnue",
+          answered: !!rev.reviewReply,
+          establishmentId: realEtabs[0].id
+        }));
+        setReviews(googleReviews);
+      }
+
+    }
+
+  } catch (e) {
+
+    console.error("Erreur sync Google:", e);
+
+  }
+
+};
+
+
+
+ const etab = establishments.find((e) => e.id === selectedEtab) || establishments[0];
+
+  const etabReviews = reviews.filter((r) => r.establishmentId === selectedEtab);
+
+  const filteredReviews = etabReviews.filter((r) => {
+
+    if (filter === "pending")  return !r.answered;
+
+    if (filter === "negative") return r.rating <= 2;
+
+    return true;
+
+  });
+
+  const pendingCount = reviews.filter((r) => !r.answered).length;
+
+
+
+  const showToast = (msg: string, type: "error" | "success" | "info" = "info") => {
+
+    setToast({ msg, type });
+
+    setTimeout(() => setToast(null), 4000);
+
+  };
+
+
+
+  const generateReply = async (review: Review) => {
+
+    if (!apiKey) { setShowApiModal(true); return; }
+
+    setSelectedReview(review);
+
+    setAiReply("");
+
+    setPublished(false);
+
+    setGenerating(true);
+
+    setShowPanel(true);
+
+
+
+    const toneMap: Record<Tone, string> = {
+
+      professionnel: "Réponds de manière professionnelle et courtoise.",
+
+      empathique:    "Réponds avec beaucoup d'empathie et de chaleur humaine.",
+
+      concis:        "Réponds de manière courte et directe, 2-3 phrases maximum.",
+
+    };
+
+
+
+    const prompt = `Tu gères les avis Google de "${etab.name}". Client: ${review.authorName}, note: ${review.rating}/5. Avis: "${review.comment}". ${toneMap[tone]} Réponds en français, 80 mots max. Uniquement le texte de la réponse.`;
+
+
+
+    try {
+
+      const res = await fetch(
+
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+
+        {
+
+          method: "POST",
+
+          headers: { "Content-Type": "application/json" },
+
+          body: JSON.stringify({
+
+            contents: [{ parts: [{ text: prompt }] }],
+
+          }),
+
+        }
+
+      );
+
+
+
+      if (!res.ok) {
+
+        const err = await res.json();
+
+        throw new Error(err.error?.message || "Erreur API");
+
+      }
+
+
+
+      const data = await res.json();
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      setAiReply(text);
+
+    } catch (e: unknown) {
+
+      const msg = e instanceof Error ? e.message : "Erreur API";
+
+      showToast("Erreur : " + msg, "error");
+
+      setAiReply("");
+
+    } finally {
+
+      setGenerating(false);
+
+    }
+
+  };
+
+
+
+  const publishReply = () => {
+
+    if (!selectedReview || !aiReply) return;
+
+    setReviews((prev) =>
+
+      prev.map((r) => (r.id === selectedReview.id ? { ...r, answered: true } : r))
+
+    );
+
+    setPublished(true);
+
+    showToast("Réponse publiée sur Google ✓", "success");
+
+  };
+
+
+
+  const ratingDist = [5, 4, 3, 2, 1].map((star) => ({
+
+    star,
+
+    count: etabReviews.filter((r) => r.rating === star).length,
+
+    pct: etabReviews.length
+
+      ? Math.round((etabReviews.filter((r) => r.rating === star).length / etabReviews.length) * 100)
+
+      : 0,
+
+  }));
+
+
+
+  const navItems = [
+
+    { id: "dashboard", icon: "◼", label: "Dashboard" },
+
+    { id: "reviews",   icon: "💬", label: "Avis",       badge: pendingCount || undefined },
+
+    { id: "alerts",    icon: "🔔", label: "Alertes",    badge: 1 },
+
+    { id: "analytics", icon: "📊", label: "Analytiques" },
+
+    { id: "settings",  icon: "⚙️",  label: "Paramètres" },
+
+  ];
+
+
+
+  return (
+
+    <div suppressHydrationWarning style={{ fontFamily: "'DM Sans', sans-serif" }}>
+
+      <style>{`
+
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { overflow: hidden; background: #0f0f12; }
+
+        @media (max-width: 768px) { body { overflow: auto; } }
+
+        ::-webkit-scrollbar { width: 4px; }
+
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+        .nav-item { display:flex;align-items:center;gap:10px;padding:8px 10px;margin:1px 8px;border-radius:8px;font-size:13.5px;cursor:pointer;color:#7c7b89;transition:all .15s; }
+
+        .nav-item:hover { background:#21212b;color:#eeedf4; }
+
+        .nav-item.active { background:rgba(79,124,255,0.12);color:#4f7cff; }
+
+        .etab-item { display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px;transition:all .15s; }
+
+        .etab-item:hover { background:#21212b; }
+
+        .etab-item.active { background:#21212b; }
+
+        .btn { padding:8px 16px;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;border:none;font-weight:500;transition:all .15s; }
+
+        .btn-primary { background:#4f7cff;color:#fff; }
+
+        .btn-primary:hover { background:#3d6bff; }
+
+        .btn-primary:disabled { background:#2a2a36;color:#5a5968;cursor:not-allowed; }
+
+        .btn-ghost { background:transparent;color:#7c7b89;border:1px solid rgba(255,255,255,0.13); }
+
+        .btn-ghost:hover { background:#21212b;color:#eeedf4; }
+
+        .pill { padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,0.07);color:#7c7b89;transition:all .15s; }
+
+        .pill.active { background:rgba(79,124,255,0.15);border-color:#4f7cff;color:#4f7cff; }
+
+        .review-item { padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.07);transition:background .15s;cursor:pointer; }
+
+        .review-item:hover { background:#21212b; }
+
+        .review-item.selected { background:rgba(79,124,255,0.06);border-left:2px solid #4f7cff; }
+
+        .tone-btn { padding:5px 12px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,0.07);color:#7c7b89;background:transparent;transition:all .15s;font-family:'DM Sans',sans-serif; }
+
+        .tone-btn.active { background:rgba(124,92,252,0.15);border-color:#7c5cfc;color:#a78bfa; }
+
+        .input-field { width:100%;background:#21212b;border:1px solid rgba(255,255,255,0.13);border-radius:8px;padding:10px 14px;color:#eeedf4;font-family:'DM Sans',sans-serif;font-size:13px;outline:none; }
+
+        .input-field:focus { border-color:#4f7cff; }
+
+        @keyframes blink { 0%,50%{opacity:1} 51%,100%{opacity:0} }
+
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+        @keyframes toastIn { from{transform:translateX(120%);opacity:0} to{transform:translateX(0);opacity:1} }
+
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+        @keyframes slideIn { from{transform:translateX(-100%)} to{transform:translateX(0)} }
+
+        .ai-cursor { display:inline-block;width:2px;height:14px;background:#7c5cfc;animation:blink .8s steps(1) infinite;vertical-align:middle;margin-left:2px; }
+
+        .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:100;animation:fadeIn .2s ease; }
+
+        .modal { background:#18181f;border:1px solid rgba(255,255,255,0.13);border-radius:16px;padding:28px;width:400px;max-width:90vw; }
+
+        .toast-wrap { position:fixed;top:20px;right:20px;z-index:200;animation:toastIn .3s ease;background:#18181f;border-radius:12px;padding:14px 18px;max-width:300px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 32px rgba(0,0,0,.5); }
+
+        .sidebar-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:40;display:none; }
+
+        @media (max-width: 768px) {
+
+          .sidebar-overlay { display:block; }
+
+          .desktop-panel { display:none !important; }
+
+          .mobile-back { display:flex !important; }
+
+          .stats-grid-responsive { grid-template-columns: repeat(2,1fr) !important; }
+
+          .topbar-responsive { padding: 10px 16px !important; }
+
+          .content-responsive { padding: 16px !important; }
+
+        }
+
+        @media (min-width: 769px) {
+
+          .mobile-menu-btn { display:none !important; }
+
+          .mobile-back { display:none !important; }
+
+        }
+
+        .mobile-panel { position:fixed;inset:0;background:#18181f;z-index:50;display:flex;flex-direction:column;animation:fadeIn .2s ease;overflow-y:auto; }
+
+      `}</style>
+
+
+
+      {toast && (
+
+        <div className="toast-wrap" style={{ border: `1px solid ${toast.type === "error" ? "rgba(239,68,68,.3)" : toast.type === "success" ? "rgba(34,197,94,.3)" : "rgba(255,255,255,.13)"}` }}>
+
+          <span style={{ fontSize: 18 }}>{toast.type === "error" ? "❌" : toast.type === "success" ? "✅" : "ℹ️"}</span>
+
+          <span style={{ fontSize: 13, color: "#eeedf4" }}>{toast.msg}</span>
+
+        </div>
+
+      )}
+
+
+
+      {showApiModal && (
+
+        <div className="modal-overlay" onClick={() => setShowApiModal(false)}>
+
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+
+            <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 8, color: "#eeedf4" }}>Clé API Gemini</div>
+
+            <div style={{ fontSize: 13, color: "#7c7b89", marginBottom: 20, lineHeight: 1.6 }}>
+
+              Entre ta clé API Gemini depuis{" "}
+
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: "#4f7cff" }}>aistudio.google.com</a>
+
+            </div>
+
+            <input className="input-field" type="password" placeholder="AIza..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} style={{ marginBottom: 16 }} />
+
+            <div style={{ display: "flex", gap: 8 }}>
+
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => { if (apiKey.length > 10) { setShowApiModal(false); showToast("Clé API enregistrée ✓", "success"); } else { showToast("Clé invalide", "error"); } }}>Enregistrer</button>
+
+              <button className="btn btn-ghost" onClick={() => setShowApiModal(false)}>Annuler</button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+
+      {showPanel && selectedReview && (
+
+        <div className="mobile-panel" style={{ display: "none" }} id="mobile-panel">
+
+          <div style={{ padding: "16px 18px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 12 }}>
+
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 12px" }} onClick={() => setShowPanel(false)}>← Retour</button>
+
+            <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>Réponse IA</div>
+
+          </div>
+
+          <div style={{ flex: 1, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 14 }}>
+
+            <div style={{ background: "#21212b", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: 14 }}>
+
+              <Stars rating={selectedReview.rating} size={14} />
+
+              <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(238,237,244,0.85)", marginTop: 6 }}>&ldquo;{selectedReview.comment}&rdquo;</div>
+
+              <div style={{ fontSize: 12, color: "#7c7b89", marginTop: 8 }}>— {selectedReview.authorName}</div>
+
+            </div>
+
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+
+              {(["professionnel", "empathique", "concis"] as Tone[]).map((t) => (
+
+                <button key={t} className={`tone-btn${tone === t ? " active" : ""}`} onClick={() => setTone(t)}>
+
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+
+                </button>
+
+              ))}
+
+            </div>
+
+            <div style={{ background: "#21212b", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: 14, fontSize: 13, lineHeight: 1.65, color: "rgba(238,237,244,0.9)", minHeight: 120 }}>
+
+              {!aiReply && !generating && <span style={{ color: "#5a5968", fontStyle: "italic" }}>Cliquez sur &ldquo;Générer&rdquo;…</span>}
+
+              {generating && !aiReply && <span style={{ color: "#7c7b89", fontStyle: "italic" }}>Génération en cours<span className="ai-cursor" /></span>}
+
+              {aiReply && <>{aiReply}{generating && <span className="ai-cursor" />}</>}
+
+            </div>
+
+            <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => generateReply(selectedReview)} disabled={generating}>
+
+              {generating ? "Génération…" : "✨ Générer avec Gemini"}
+
+            </button>
+
+            {aiReply && !generating && !published && (
+
+              <button className="btn btn-primary" style={{ width: "100%", background: "#22c55e" }} onClick={publishReply}>Publier sur Google</button>
+
+            )}
+
+            {published && <div style={{ textAlign: "center", fontSize: 13, color: "#22c55e", padding: "10px 0" }}>✓ Réponse publiée</div>}
+
+          </div>
+
+        </div>
+
+      )}
+
+
+
+      <div style={{ display: "flex", height: "100vh", background: "#0f0f12", color: "#eeedf4", overflow: "hidden" }}>
+
+
+
+        {sidebarOpen && (
+
+          <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+
+        )}
+
+
+
+        <div style={{
+
+          width: 230, minWidth: 230, background: "#18181f",
+
+          borderRight: "1px solid rgba(255,255,255,0.07)",
+
+          display: "flex", flexDirection: "column", overflow: "hidden",
+
+          position: "relative", zIndex: 50,
+
+          ...(typeof window !== "undefined" && window.innerWidth <= 768 ? {
+
+            position: "fixed" as const, top: 0, left: 0, bottom: 0,
+
+            transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+
+            transition: "transform .25s ease",
+
+          } : {}),
+
+        }}>
+
+          <div style={{ padding: "20px 16px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 10 }}>
+
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#4f7cff,#7c5cfc)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>⭐</div>
+
+            <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 15, fontWeight: 600, flex: 1 }}>ReviewsHub</span>
+
+            <button className="mobile-menu-btn btn btn-ghost" style={{ padding: "4px 8px", fontSize: 16, display: "none" }} onClick={() => setSidebarOpen(false)}>✕</button>
+
+          </div>
+
+
+
+          <div style={{ padding: "10px 0 4px" }}>
+
+            <div style={{ padding: "4px 16px 6px", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "#5a5968", fontWeight: 500 }}>Navigation</div>
+
+            {navItems.map((item) => (
+
+              <div key={item.id} className={`nav-item${activeNav === item.id ? " active" : ""}`} onClick={() => { setActiveNav(item.id); setSidebarOpen(false); }}>
+
+                <span style={{ fontSize: 15, width: 18, textAlign: "center" }}>{item.icon}</span>
+
+                <span style={{ flex: 1 }}>{item.label}</span>
+
+                {item.badge ? <span style={{ background: "#ef4444", color: "#fff", fontSize: 10, padding: "1px 6px", borderRadius: 20, fontWeight: 600 }}>{item.badge}</span> : null}
+
+              </div>
+
+            ))}
+
+          </div>
+
+
+
+          <div style={{ padding: "12px 16px 6px", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "#5a5968", fontWeight: 500 }}>Établissements</div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 8px" }}>
+
+            {establishments.map((e) => (
+
+              <div key={e.id} className={`etab-item${selectedEtab === e.id ? " active" : ""}`} onClick={() => { setSelectedEtab(e.id); setSelectedReview(null); setAiReply(""); setSidebarOpen(false); }}>
+
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: e.color, flexShrink: 0 }} />
+
+                <div style={{ flex: 1 }}>
+
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{e.name}</div>
+
+                  <div style={{ fontSize: 11, color: "#fbbf24" }}>★ {e.avgRating}</div>
+
+                </div>
+
+                {e.pending > 0 && <span style={{ fontSize: 10, color: "#f59e0b", background: "rgba(245,158,11,0.12)", padding: "1px 6px", borderRadius: 10 }}>{e.pending}</span>}
+
+              </div>
+
+            ))}
+
+          </div>
+
+
+
+          <div style={{ padding: 12, borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", flexDirection: "column", gap: 8 }}>
+
+            <button className="btn btn-ghost" style={{ width: "100%", fontSize: 12, color: googleConnected ? "#22c55e" : "#7c7b89" }}
+
+              onClick={() => { window.location.href = "/api/auth/google"; }}>
+
+              {googleConnected ? "✓ Google Business connecté" : "🔗 Connecter Google Business"}
+
+            </button>
+
+            <button className="btn btn-ghost" style={{ width: "100%", fontSize: 12 }} onClick={() => setShowApiModal(true)}>
+
+              🔑 {apiKey ? "Clé API configurée ✓" : "Configurer clé API"}
+
+            </button>
+
+          </div>
+
+        </div>
+
+
+
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+
+          <div className="topbar-responsive" style={{ padding: "14px 24px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#18181f", display: "flex", alignItems: "center", gap: 12 }}>
+
+            <button className="mobile-menu-btn btn btn-ghost" style={{ padding: "6px 10px", fontSize: 18, display: "none" }} onClick={() => setSidebarOpen(true)}>☰</button>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+
+              <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 15, fontWeight: 500 }}>Dashboard · </span>
+
+              <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 15, fontWeight: 500, color: etab.color }}>{etab.name}</span>
+
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 20, fontSize: 11, color: "#ef4444", cursor: "pointer", animation: "pulse 2s infinite", whiteSpace: "nowrap" }}
+
+              onClick={() => showToast("Nouvel avis 1★ de Marc Alain", "error")}>
+
+              🔴 Avis 1★
+
+            </div>
+
+          </div>
+
+
+
+          <div className="content-responsive" style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+
+
+
+            <div className="stats-grid-responsive" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+
+              {[
+
+                { label: "Note moy.", value: etab.avgRating, color: "#fbbf24", trend: "↑ +0.2", tc: "#22c55e" },
+
+                { label: "Total avis", value: etabReviews.length || etab.total, color: "#eeedf4", trend: "↑ +18", tc: "#22c55e" },
+
+                { label: "Sans réponse", value: etabReviews.filter((r) => !r.answered).length, color: "#ef4444", trend: "À traiter", tc: "#ef4444" },
+
+                { label: "Taux réponse", value: `${Math.round(etabReviews.filter((r) => r.answered).length / Math.max(etabReviews.length, 1) * 100)}%`, color: "#22c55e", trend: "↑ +3%", tc: "#22c55e" },
+
+              ].map((s, i) => (
+
+                <div key={i} style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "14px 16px" }}>
+
+                  <div style={{ fontSize: 10, color: "#7c7b89", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>{s.label}</div>
+
+                  <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 22, fontWeight: 600, color: s.color }}>{s.value}</div>
+
+                  <div style={{ fontSize: 11, marginTop: 4, color: s.tc }}>{s.trend}</div>
+
+                </div>
+
+              ))}
+
+            </div>
+
+
+
+            <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 20 }}>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+
+                <div>
+
+                  <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 42, fontWeight: 600, lineHeight: 1 }}>{etab.avgRating}</div>
+
+                  <div style={{ fontSize: 18, color: "#fbbf24", letterSpacing: 2, margin: "6px 0 4px" }}>★★★★★</div>
+
+                  <div style={{ fontSize: 13, color: "#7c7b89" }}>sur {etabReviews.length || etab.total} avis</div>
+
+                </div>
+
+                <div style={{ flex: 1, minWidth: 180 }}>
+
+                  {ratingDist.map(({ star, count, pct }) => (
+
+                    <div key={star} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
+
+                      <span style={{ fontSize: 12, color: "#7c7b89", width: 8 }}>{star}</span>
+
+                      <div style={{ flex: 1, height: 6, background: "#21212b", borderRadius: 3, overflow: "hidden" }}>
+
+                        <div style={{ height: "100%", borderRadius: 3, background: star >= 4 ? "#fbbf24" : star === 3 ? "#f59e0b" : "#ef4444", width: `${pct}%`, transition: "width .6s ease" }} />
+
+                      </div>
+
+                      <span style={{ fontSize: 12, color: "#7c7b89", width: 24, textAlign: "right" }}>{count}</span>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+
+            <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden" }}>
+
+              <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+
+                <div style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>Avis récents</div>
+
+                <div style={{ display: "flex", gap: 6 }}>
+
+                  {(["all", "pending", "negative"] as const).map((f) => (
+
+                    <div key={f} className={`pill${filter === f ? " active" : ""}`} onClick={() => setFilter(f)}>
+
+                      {f === "all" ? "Tous" : f === "pending" ? "À répondre" : "Négatifs"}
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+              </div>
+
+              <div>
+
+                {filteredReviews.length === 0 && (
+
+                  <div style={{ padding: 32, textAlign: "center", color: "#5a5968", fontSize: 14 }}>Aucun avis dans cette catégorie</div>
+
+                )}
+
+                {filteredReviews.map((review) => (
+
+                  <div key={review.id} className={`review-item${selectedReview?.id === review.id ? " selected" : ""}`}
+
+                    onClick={() => { setSelectedReview(review); setAiReply(""); setPublished(false); }}>
+
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
+
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: review.avatarColor + "22", color: review.avatarColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+
+                        {review.initials}
+
+                      </div>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+
+                        <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>{review.authorName}</div>
+
+                        <div style={{ fontSize: 12, color: "#7c7b89", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+
+                          <span>{review.date}</span>
+
+                          <Stars rating={review.rating} size={12} />
+
+                        </div>
+
+                      </div>
+
+                      <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 10, fontWeight: 500, flexShrink: 0, background: review.answered ? "rgba(34,197,94,0.12)" : review.rating <= 2 ? "rgba(239,68,68,0.12)" : "rgba(79,124,255,0.12)", color: review.answered ? "#22c55e" : review.rating <= 2 ? "#ef4444" : "#4f7cff" }}>
+
+                        {review.answered ? "Répondu" : review.rating <= 2 ? "Urgent" : "À répondre"}
+
+                      </span>
+
+                    </div>
+
+                    <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "rgba(238,237,244,0.75)", marginBottom: 12 }}>
+
+                      &ldquo;{review.comment}&rdquo;
+
+                    </div>
+
+                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }}
+
+                      onClick={(e) => { e.stopPropagation(); generateReply(review); }}>
+
+                      ✨ Générer réponse IA
+
+                    </button>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+
+        <div className="desktop-panel" style={{ width: 320, minWidth: 320, background: "#18181f", borderLeft: "1px solid rgba(255,255,255,0.07)", display: "flex", flexDirection: "column" }}>
+
+          <div style={{ padding: "16px 18px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+
+            <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>Réponse IA</div>
+
+            <div style={{ fontSize: 12, color: "#7c7b89" }}>
+
+              {selectedReview ? `${selectedReview.authorName} · ${"★".repeat(selectedReview.rating)}` : "Sélectionnez un avis"}
+
+            </div>
+
+          </div>
+
+
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px", display: "flex", flexDirection: "column", gap: 14 }}>
+
+            {!selectedReview ? (
+
+              <div style={{ textAlign: "center", padding: "40px 16px", color: "#5a5968" }}>
+
+                <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>✨</div>
+
+                <div style={{ fontSize: 14, marginBottom: 8, color: "#7c7b89" }}>Sélectionnez un avis</div>
+
+                <div style={{ fontSize: 13, lineHeight: 1.6 }}>Cliquez sur un avis pour générer une réponse avec Gemini.</div>
+
+              </div>
+
+            ) : (
+
+              <>
+
+                <div style={{ background: "#21212b", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: 14 }}>
+
+                  <Stars rating={selectedReview.rating} size={14} />
+
+                  <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(238,237,244,0.85)", marginTop: 6 }}>&ldquo;{selectedReview.comment}&rdquo;</div>
+
+                  <div style={{ fontSize: 12, color: "#7c7b89", marginTop: 8 }}>— {selectedReview.authorName}</div>
+
+                </div>
+
+
+
+                <div>
+
+                  <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c5cfc", animation: "pulse 1.5s infinite" }} />
+
+                    Ton de la réponse
+
+                  </div>
+
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+
+                    {(["professionnel", "empathique", "concis"] as Tone[]).map((t) => (
+
+                      <button key={t} className={`tone-btn${tone === t ? " active" : ""}`} onClick={() => setTone(t)}>
+
+                        {t.charAt(0).toUpperCase() + t.slice(1)}
+
+                      </button>
+
+                    ))}
+
+                  </div>
+
+                </div>
+
+
+
+                <div>
+
+                  <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c5cfc", animation: "pulse 1.5s infinite" }} />
+
+                    Réponse générée
+
+                  </div>
+
+                  <div style={{ background: "#21212b", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: 14, fontSize: 13, lineHeight: 1.65, color: "rgba(238,237,244,0.9)", minHeight: 120 }}>
+
+                    {!aiReply && !generating && <span style={{ color: "#5a5968", fontStyle: "italic" }}>Cliquez sur &ldquo;Générer&rdquo;…</span>}
+
+                    {generating && !aiReply && <span style={{ color: "#7c7b89", fontStyle: "italic" }}>Génération en cours<span className="ai-cursor" /></span>}
+
+                    {aiReply && <>{aiReply}{generating && <span className="ai-cursor" />}</>}
+
+                  </div>
+
+                </div>
+
+
+
+                <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => generateReply(selectedReview)} disabled={generating}>
+
+                  {generating ? "Génération…" : "✨ Générer avec Gemini"}
+
+                </button>
+
+              </>
+
+            )}
+
+          </div>
+
+
+
+          {aiReply && !generating && (
+
+            <div style={{ padding: "14px 18px", borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", flexDirection: "column", gap: 8 }}>
+
+              {published ? (
+
+                <div style={{ textAlign: "center", fontSize: 13, color: "#22c55e", padding: "10px 0" }}>✓ Réponse publiée sur Google</div>
+
+              ) : (
+
+                <>
+
+                  <button className="btn btn-primary" onClick={publishReply}>Publier sur Google</button>
+
+                  <button className="btn btn-ghost" onClick={() => generateReply(selectedReview!)}>↺ Régénérer</button>
+
+                </>
+
+              )}
+
+            </div>
+
+          )}
+
+        </div>
+
+      </div>
+
+    </div>
+
+  );
+
+}
