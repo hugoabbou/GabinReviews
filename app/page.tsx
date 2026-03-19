@@ -22,6 +22,8 @@ type Review = {
 
   answered: boolean;
 
+  reply?: string;
+
   establishmentId: string;
 
 };
@@ -272,6 +274,7 @@ export default function ReviewsHub() {
           comment: rev.reviewText || "",
           date: rev.createTime ? new Date(rev.createTime).toLocaleDateString("fr-FR") : "Date inconnue",
           answered: !!rev.reviewReply,
+          reply: rev.reviewReply?.comment || "",
           establishmentId: realEtabs[0].id
         }));
         setReviews(googleReviews);
@@ -347,7 +350,17 @@ export default function ReviewsHub() {
 
 
 
-    const prompt = `Tu gères les avis Google de "${etab.name}". Client: ${review.authorName}, note: ${review.rating}/5. Avis: "${review.comment}". ${toneMap[tone]} Réponds en français, 80 mots max. Uniquement le texte de la réponse.`;
+    const existingReplies = reviews
+      .filter((r) => r.answered && r.reply && r.establishmentId === review.establishmentId)
+      .slice(0, 3)
+      .map((r) => `Avis: "${r.comment}" → Réponse: "${r.reply}"`)
+      .join("\n");
+
+    const styleContext = existingReplies
+      ? `\n\nVoici des exemples de réponses déjà publiées pour cet établissement, adopte exactement le même style et ton :\n${existingReplies}`
+      : "";
+
+    const prompt = `Tu gères les avis Google de "${etab.name}". Client: ${review.authorName}, note: ${review.rating}/5. Avis: "${review.comment}". ${toneMap[tone]} Réponds en français, 80 mots max. Uniquement le texte de la réponse.${styleContext}`;
 
 
 
@@ -465,7 +478,7 @@ export default function ReviewsHub() {
 
     setReviews((prev) =>
 
-      prev.map((r) => (r.id === selectedReview.id ? { ...r, answered: true } : r))
+      prev.map((r) => (r.id === selectedReview.id ? { ...r, answered: true, reply: aiReply } : r))
 
     );
 
