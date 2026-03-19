@@ -120,6 +120,11 @@ export default function ReviewsHub() {
 
   const [apiKey, setApiKey]                 = useState("");
 
+  const [toneExamples, setToneExamples]     = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("reviewshub_tone_examples") || "";
+    return "";
+  });
+
   const [showApiModal, setShowApiModal]     = useState(false);
 
   const [toast, setToast]                   = useState<{ msg: string; type: "error" | "success" | "info" } | null>(null);
@@ -350,14 +355,16 @@ export default function ReviewsHub() {
 
 
 
-    const existingReplies = reviews
+    const googleReplies = reviews
       .filter((r) => r.answered && r.reply && r.establishmentId === review.establishmentId)
       .slice(0, 3)
       .map((r) => `Avis: "${r.comment}" → Réponse: "${r.reply}"`)
       .join("\n");
 
-    const styleContext = existingReplies
-      ? `\n\nVoici des exemples de réponses déjà publiées pour cet établissement, adopte exactement le même style et ton :\n${existingReplies}`
+    const exampleText = googleReplies || toneExamples.trim();
+
+    const styleContext = exampleText
+      ? `\n\nVoici des exemples de réponses déjà publiées, adopte exactement le même style, ton et vocabulaire :\n${exampleText}`
       : "";
 
     const prompt = `Tu gères les avis Google de "${etab.name}". Client: ${review.authorName}, note: ${review.rating}/5. Avis: "${review.comment}". ${toneMap[tone]} Réponds en français, 80 mots max. Uniquement le texte de la réponse.${styleContext}`;
@@ -672,11 +679,34 @@ export default function ReviewsHub() {
 
             </div>
 
-            <input className="input-field" type="password" placeholder="AIza..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} style={{ marginBottom: 16 }} />
+            <input className="input-field" type="password" placeholder="AIza..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} style={{ marginBottom: 20 }} />
+
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#eeedf4", marginBottom: 6 }}>Exemples de réponses publiées</div>
+
+            <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 10, lineHeight: 1.5 }}>
+              Colle ici 2-3 réponses que tu as déjà publiées sur Google. L'IA imitera ton style et ton vocabulaire.
+            </div>
+
+            <textarea
+              className="input-field"
+              rows={5}
+              placeholder={"Exemple 1 : Merci beaucoup pour votre retour...\n\nExemple 2 : Nous sommes ravis de..."}
+              value={toneExamples}
+              onChange={(e) => setToneExamples(e.target.value)}
+              style={{ marginBottom: 16, resize: "vertical" }}
+            />
 
             <div style={{ display: "flex", gap: 8 }}>
 
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => { if (apiKey.length > 10) { setShowApiModal(false); showToast("Clé API enregistrée ✓", "success"); } else { showToast("Clé invalide", "error"); } }}>Enregistrer</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => {
+                if (apiKey.length > 10) {
+                  localStorage.setItem("reviewshub_tone_examples", toneExamples);
+                  setShowApiModal(false);
+                  showToast("Paramètres enregistrés ✓", "success");
+                } else {
+                  showToast("Clé API invalide", "error");
+                }
+              }}>Enregistrer</button>
 
               <button className="btn btn-ghost" onClick={() => setShowApiModal(false)}>Annuler</button>
 
