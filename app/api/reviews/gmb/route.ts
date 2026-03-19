@@ -33,3 +33,31 @@ export async function GET(req: Request) {
   );
   return NextResponse.json(await res.json());
 }
+
+export async function POST(req: Request) {
+  const accessToken = req.headers.get("x-google-token");
+  if (!accessToken) {
+    return NextResponse.json({ error: "Non connecté à Google" }, { status: 401 });
+  }
+
+  const { accountId, locationId, reviewId, reply } = await req.json();
+
+  const res = await fetch(
+    `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/reviews/${reviewId}/reply`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ comment: reply }),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json();
+    return NextResponse.json({ error: err }, { status: res.status });
+  }
+
+  return NextResponse.json({ success: true });
+}

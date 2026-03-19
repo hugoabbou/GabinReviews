@@ -130,9 +130,17 @@ export default function ReviewsHub() {
 
   const [showPanel, setShowPanel]           = useState(false);
 
+  const [showAlerts, setShowAlerts]         = useState(false);
+
+  const [seenAlerts, setSeenAlerts]         = useState<Set<string>>(new Set());
+
   const [googleToken, setGoogleToken]       = useState("");
 
   const [googleConnected, setGoogleConnected] = useState(false);
+
+  const [gmbAccountId, setGmbAccountId]     = useState("");
+
+  const [gmbLocationId, setGmbLocationId]   = useState("");
 
 
 
@@ -236,11 +244,13 @@ export default function ReviewsHub() {
 
       
 
-      setEstablishments(realEtabs); // On remplace la liste fictive par la vraie
+      setEstablishments(realEtabs);
 
-      setSelectedEtab(realEtabs[0].id); // On sélectionne le premier par défaut
+      setSelectedEtab(realEtabs[0].id);
 
-      
+      setGmbAccountId(accountId);
+
+      setGmbLocationId(realEtabs[0].id);
 
       // 3. Récupère les avis du premier établissement trouvé
 
@@ -294,6 +304,8 @@ export default function ReviewsHub() {
   });
 
   const pendingCount = reviews.filter((r) => !r.answered).length;
+
+  const negativeReviews = reviews.filter((r) => r.rating <= 2 && !r.answered);
 
 
 
@@ -397,9 +409,59 @@ export default function ReviewsHub() {
 
 
 
-  const publishReply = () => {
+  const publishReply = async () => {
 
     if (!selectedReview || !aiReply) return;
+
+    if (googleConnected && gmbAccountId && gmbLocationId) {
+
+      try {
+
+        const reviewId = selectedReview.id.split("/").pop();
+
+        const res = await fetch("/api/reviews/gmb", {
+
+          method: "POST",
+
+          headers: {
+
+            "Content-Type": "application/json",
+
+            "x-google-token": googleToken,
+
+          },
+
+          body: JSON.stringify({
+
+            accountId: gmbAccountId,
+
+            locationId: gmbLocationId,
+
+            reviewId,
+
+            reply: aiReply,
+
+          }),
+
+        });
+
+        if (!res.ok) {
+
+          showToast("Erreur lors de la publication", "error");
+
+          return;
+
+        }
+
+      } catch {
+
+        showToast("Erreur lors de la publication", "error");
+
+        return;
+
+      }
+
+    }
 
     setReviews((prev) =>
 
@@ -525,11 +587,17 @@ export default function ReviewsHub() {
 
         .toast-wrap { position:fixed;top:20px;right:20px;z-index:200;animation:toastIn .3s ease;background:#18181f;border-radius:12px;padding:14px 18px;max-width:300px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 32px rgba(0,0,0,.5); }
 
-        .sidebar-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:40;display:none; }
+        .sidebar-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:40; }
+
+        .sidebar { width:230px;min-width:230px;background:#18181f;border-right:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:50; }
+
+        .mobile-panel { display:none; }
 
         @media (max-width: 768px) {
 
-          .sidebar-overlay { display:block; }
+          .sidebar { position:fixed;top:0;left:0;bottom:0;transform:translateX(-100%);transition:transform .25s ease; }
+
+          .sidebar.open { transform:translateX(0); }
 
           .desktop-panel { display:none !important; }
 
@@ -541,6 +609,8 @@ export default function ReviewsHub() {
 
           .content-responsive { padding: 16px !important; }
 
+          .mobile-panel { position:fixed;inset:0;background:#18181f;z-index:50;display:flex;flex-direction:column;animation:fadeIn .2s ease;overflow-y:auto; }
+
         }
 
         @media (min-width: 769px) {
@@ -551,11 +621,13 @@ export default function ReviewsHub() {
 
         }
 
-        .mobile-panel { position:fixed;inset:0;background:#18181f;z-index:50;display:flex;flex-direction:column;animation:fadeIn .2s ease;overflow-y:auto; }
-
       `}</style>
 
 
+
+      {showAlerts && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 99 }} onClick={() => setShowAlerts(false)} />
+      )}
 
       {toast && (
 
@@ -607,7 +679,7 @@ export default function ReviewsHub() {
 
       {showPanel && selectedReview && (
 
-        <div className="mobile-panel" style={{ display: "none" }} id="mobile-panel">
+        <div className="mobile-panel">
 
           <div style={{ padding: "16px 18px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 12 }}>
 
@@ -687,27 +759,7 @@ export default function ReviewsHub() {
 
 
 
-        <div style={{
-
-          width: 230, minWidth: 230, background: "#18181f",
-
-          borderRight: "1px solid rgba(255,255,255,0.07)",
-
-          display: "flex", flexDirection: "column", overflow: "hidden",
-
-          position: "relative", zIndex: 50,
-
-          ...(typeof window !== "undefined" && window.innerWidth <= 768 ? {
-
-            position: "fixed" as const, top: 0, left: 0, bottom: 0,
-
-            transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
-
-            transition: "transform .25s ease",
-
-          } : {}),
-
-        }}>
+        <div className={`sidebar${sidebarOpen ? " open" : ""}`}>
 
           <div style={{ padding: "20px 16px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 10 }}>
 
@@ -787,6 +839,14 @@ export default function ReviewsHub() {
 
             </button>
 
+            <button className="btn btn-ghost" style={{ width: "100%", fontSize: 12, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)" }}
+              onClick={async () => {
+                await fetch("/api/auth/logout", { method: "POST" });
+                window.location.href = "/login";
+              }}>
+              Déconnexion
+            </button>
+
           </div>
 
         </div>
@@ -807,11 +867,57 @@ export default function ReviewsHub() {
 
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 20, fontSize: 11, color: "#ef4444", cursor: "pointer", animation: "pulse 2s infinite", whiteSpace: "nowrap" }}
+            <div style={{ position: "relative" }}>
 
-              onClick={() => showToast("Nouvel avis 1★ de Marc Alain", "error")}>
+              <button className="btn btn-ghost" style={{ fontSize: 13, padding: "6px 12px", position: "relative" }}
 
-              🔴 Avis 1★
+                onClick={() => { setShowAlerts((v) => !v); setSeenAlerts(new Set(negativeReviews.map((r) => r.id))); }}>
+
+                🔔
+
+                {negativeReviews.filter((r) => !seenAlerts.has(r.id)).length > 0 && (
+
+                  <span style={{ position: "absolute", top: 4, right: 4, width: 8, height: 8, background: "#ef4444", borderRadius: "50%", display: "block" }} />
+
+                )}
+
+              </button>
+
+              {showAlerts && (
+
+                <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 300, background: "#18181f", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", zIndex: 100, overflow: "hidden" }}>
+
+                  <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", fontSize: 13, fontWeight: 600 }}>Avis négatifs récents</div>
+
+                  {negativeReviews.length === 0 ? (
+
+                    <div style={{ padding: 20, fontSize: 13, color: "#7c7b89", textAlign: "center" }}>Aucun avis négatif</div>
+
+                  ) : negativeReviews.slice(0, 5).map((r) => (
+
+                    <div key={r.id} style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)", cursor: "pointer" }}
+
+                      onClick={() => { setSelectedReview(r); setShowAlerts(false); setAiReply(""); setPublished(false); }}>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+
+                        <span style={{ fontSize: 11, color: "#ef4444" }}>{"★".repeat(r.rating)}</span>
+
+                        <span style={{ fontSize: 12, fontWeight: 500 }}>{r.authorName}</span>
+
+                        {!seenAlerts.has(r.id) && <span style={{ width: 6, height: 6, background: "#ef4444", borderRadius: "50%", display: "inline-block", marginLeft: "auto" }} />}
+
+                      </div>
+
+                      <div style={{ fontSize: 12, color: "#7c7b89", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.comment}</div>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+              )}
 
             </div>
 

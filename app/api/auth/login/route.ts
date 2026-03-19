@@ -4,14 +4,17 @@ export async function POST(req: Request) {
   try {
     const { username, password } = await req.json();
 
-    const validUsername = process.env.ADMIN_USERNAME;
-    const validPassword = process.env.ADMIN_PASSWORD;
-
-    if (!validUsername || !validPassword) {
+    const usersEnv = process.env.ADMIN_USERS;
+    if (!usersEnv) {
       return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
     }
 
-    if (username !== validUsername || password !== validPassword) {
+    const validUser = usersEnv.split(",").some((entry: string) => {
+      const [u, p] = entry.trim().split(":");
+      return u === username && p === password;
+    });
+
+    if (!validUser) {
       return NextResponse.json({ error: "Identifiants incorrects" }, { status: 401 });
     }
 
