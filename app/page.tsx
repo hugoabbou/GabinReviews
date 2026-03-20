@@ -30,6 +30,8 @@ type Review = {
 
   platform: Platform;
 
+  dateTs?: number;
+
 };
 
 
@@ -72,23 +74,29 @@ const ESTABLISHMENTS: Establishment[] = [
 
 const MOCK_REVIEWS: Review[] = [
 
-  { id: "r1", authorName: "Marc Alain",     initials: "MA", avatarColor: "#ef4444", rating: 1, answered: false, establishmentId: "1", date: "Il y a 4 min",  platform: "google",    comment: "Service absolument déplorable. J'ai attendu 45 minutes pour être servi et personne ne s'est excusé. La qualité ne correspond pas au prix pratiqué. Je ne reviendrai jamais." },
+  { id: "r1", authorName: "Marc Alain",     initials: "MA", avatarColor: "#ef4444", rating: 1, answered: false, establishmentId: "1", date: "Il y a 4 min",  platform: "google",    dateTs: Date.now() - 4*60*1000,         comment: "Service absolument déplorable. J'ai attendu 45 minutes pour être servi et personne ne s'est excusé. La qualité ne correspond pas au prix pratiqué. Je ne reviendrai jamais." },
 
-  { id: "r2", authorName: "Sophie Bernard", initials: "SB", avatarColor: "#22c55e", rating: 5, answered: false, establishmentId: "1", date: "Hier",           platform: "google",    comment: "Expérience parfaite de bout en bout. L'équipe est aux petits soins, l'ambiance est chaleureuse. Je recommande vivement !" },
+  { id: "r2", authorName: "Sophie Bernard", initials: "SB", avatarColor: "#22c55e", rating: 5, answered: false, establishmentId: "1", date: "Hier",           platform: "google",    dateTs: Date.now() - 1*86400000,        comment: "Expérience parfaite de bout en bout. L'équipe est aux petits soins, l'ambiance est chaleureuse. Je recommande vivement !" },
 
-  { id: "r3", authorName: "Thomas Dupont",  initials: "TD", avatarColor: "#4f7cff", rating: 4, answered: true,  establishmentId: "1", date: "Il y a 2 jours", platform: "ubereats",  comment: "Très bon dans l'ensemble. Quelques détails à améliorer sur les temps d'attente mais l'accueil est excellent." },
+  { id: "r3", authorName: "Thomas Dupont",  initials: "TD", avatarColor: "#4f7cff", rating: 4, answered: true,  establishmentId: "1", date: "Il y a 2 jours", platform: "ubereats",  dateTs: Date.now() - 2*86400000,        comment: "Très bon dans l'ensemble. Quelques détails à améliorer sur les temps d'attente mais l'accueil est excellent." },
 
-  { id: "r4", authorName: "Julie Martin",   initials: "JM", avatarColor: "#a855f7", rating: 3, answered: false, establishmentId: "2", date: "Il y a 3 jours", platform: "deliveroo", comment: "Correct sans plus. Le personnel est sympa mais l'attente était un peu longue pour un mercredi midi." },
+  { id: "r4", authorName: "Julie Martin",   initials: "JM", avatarColor: "#a855f7", rating: 3, answered: false, establishmentId: "2", date: "Il y a 3 jours", platform: "deliveroo", dateTs: Date.now() - 3*86400000,        comment: "Correct sans plus. Le personnel est sympa mais l'attente était un peu longue pour un mercredi midi." },
 
-  { id: "r5", authorName: "Pierre Leclerc", initials: "PL", avatarColor: "#06b6d4", rating: 5, answered: true,  establishmentId: "2", date: "Il y a 4 jours", platform: "google",    comment: "Excellent comme toujours ! La meilleure adresse de Lyon sans hésitation." },
+  { id: "r5", authorName: "Pierre Leclerc", initials: "PL", avatarColor: "#06b6d4", rating: 5, answered: true,  establishmentId: "2", date: "Il y a 4 jours", platform: "google",    dateTs: Date.now() - 4*86400000,        comment: "Excellent comme toujours ! La meilleure adresse de Lyon sans hésitation." },
 
-  { id: "r6", authorName: "Camille Roux",   initials: "CR", avatarColor: "#f97316", rating: 2, answered: false, establishmentId: "3", date: "Il y a 5 jours", platform: "ubereats",  comment: "Déçue par cette visite. L'accueil était froid et les produits n'étaient pas frais." },
+  { id: "r6", authorName: "Camille Roux",   initials: "CR", avatarColor: "#f97316", rating: 2, answered: false, establishmentId: "3", date: "Il y a 5 jours", platform: "ubereats",  dateTs: Date.now() - 5*86400000,        comment: "Déçue par cette visite. L'accueil était froid et les produits n'étaient pas frais." },
 
-  { id: "r7", authorName: "Antoine Morel",  initials: "AM", avatarColor: "#8b5cf6", rating: 4, answered: false, establishmentId: "1", date: "Il y a 6 jours", platform: "deliveroo", comment: "Livraison rapide et plats bien emballés. La qualité était au rendez-vous, je recommande !" },
+  { id: "r7", authorName: "Antoine Morel",  initials: "AM", avatarColor: "#8b5cf6", rating: 4, answered: false, establishmentId: "1", date: "Il y a 6 jours", platform: "deliveroo", dateTs: Date.now() - 6*86400000,        comment: "Livraison rapide et plats bien emballés. La qualité était au rendez-vous, je recommande !" },
 
-  { id: "r8", authorName: "Lucie Fontaine", initials: "LF", avatarColor: "#ec4899", rating: 2, answered: false, establishmentId: "2", date: "Il y a 1 sem.",  platform: "ubereats",  comment: "Commande incomplète, un article manquait. Le service client n'a pas répondu rapidement." },
+  { id: "r8", authorName: "Lucie Fontaine", initials: "LF", avatarColor: "#ec4899", rating: 2, answered: false, establishmentId: "2", date: "Il y a 1 sem.",  platform: "ubereats",  dateTs: Date.now() - 8*86400000,        comment: "Commande incomplète, un article manquait. Le service client n'a pas répondu rapidement." },
 
-  { id: "r9", authorName: "Hugo Garnier",   initials: "HG", avatarColor: "#14b8a6", rating: 5, answered: false, establishmentId: "3", date: "Il y a 1 sem.",  platform: "deliveroo", comment: "Parfait comme d'habitude. Les portions sont généreuses et tout était chaud à la livraison." },
+  { id: "r9", authorName: "Hugo Garnier",   initials: "HG", avatarColor: "#14b8a6", rating: 5, answered: false, establishmentId: "3", date: "Il y a 1 sem.",  platform: "deliveroo", dateTs: Date.now() - 8*86400000,        comment: "Parfait comme d'habitude. Les portions sont généreuses et tout était chaud à la livraison." },
+
+  { id: "r10", authorName: "Clara Petit",   initials: "CP", avatarColor: "#f59e0b", rating: 1, answered: false, establishmentId: "1", date: "Il y a 35 jours", platform: "google",   dateTs: Date.now() - 35*86400000,       comment: "Très mauvaise expérience. Le personnel était irrespectueux et la nourriture froide." },
+
+  { id: "r11", authorName: "Romain Blanc",  initials: "RB", avatarColor: "#6366f1", rating: 5, answered: true,  establishmentId: "2", date: "Il y a 50 jours", platform: "ubereats", dateTs: Date.now() - 50*86400000,       comment: "Toujours aussi bon ! La livraison est rapide et les plats sont délicieux." },
+
+  { id: "r12", authorName: "Nadia Okafor",  initials: "NO", avatarColor: "#10b981", rating: 3, answered: false, establishmentId: "3", date: "Il y a 95 jours", platform: "deliveroo",dateTs: Date.now() - 95*86400000,       comment: "Correct sans plus. Rien d'exceptionnel mais rien à redire non plus." },
 
 ];
 
@@ -174,6 +182,12 @@ export default function ReviewsHub() {
   const [alertsEtab, setAlertsEtab]         = useState<"all" | string>("all");
 
   const [platformFilter, setPlatformFilter] = useState<"all" | Platform>("all");
+
+  const [dashPlatform, setDashPlatform]     = useState<"all" | Platform>("all");
+
+  const [alertsPlatform, setAlertsPlatform] = useState<"all" | Platform>("all");
+
+  const [timeframe, setTimeframe]           = useState<"7d" | "30d" | "90d" | "all">("all");
 
   const [googleToken, setGoogleToken]       = useState("");
 
@@ -536,7 +550,14 @@ export default function ReviewsHub() {
 
 
 
-  const dashReviews = dashboardEtab === "all" ? reviews : reviews.filter((r: Review) => r.establishmentId === dashboardEtab);
+  const timeframeCutoff = timeframe === "7d" ? Date.now() - 7*86400000 : timeframe === "30d" ? Date.now() - 30*86400000 : timeframe === "90d" ? Date.now() - 90*86400000 : 0;
+
+  const dashReviews = reviews.filter((r: Review) => {
+    if (dashboardEtab !== "all" && r.establishmentId !== dashboardEtab) return false;
+    if (dashPlatform !== "all" && r.platform !== dashPlatform) return false;
+    if (timeframe !== "all" && r.dateTs !== undefined && r.dateTs < timeframeCutoff) return false;
+    return true;
+  });
 
   const dashAvgRating = dashboardEtab === "all"
     ? (establishments.reduce((s: number, e: Establishment) => s + e.avgRating, 0) / Math.max(establishments.length, 1)).toFixed(1)
@@ -817,11 +838,19 @@ export default function ReviewsHub() {
             </button>
 
             {aiReply && !generating && !published && (
-
-              <button className="btn btn-primary" style={{ width: "100%", background: PLATFORM_META[selectedReview.platform].color }} onClick={publishReply}>
-                Publier sur {PLATFORM_META[selectedReview.platform].label}
-              </button>
-
+              selectedReview.platform === "google" ? (
+                <button className="btn btn-primary" style={{ width: "100%", background: PLATFORM_META["google"].color }} onClick={publishReply}>
+                  Publier sur Google
+                </button>
+              ) : (
+                <button className="btn btn-primary" style={{ width: "100%", background: PLATFORM_META[selectedReview.platform].color }} onClick={() => {
+                  navigator.clipboard.writeText(aiReply);
+                  showToast(`Réponse copiée ! Collez-la sur ${PLATFORM_META[selectedReview.platform].label} ✓`, "success");
+                  publishReply();
+                }}>
+                  📋 Copier pour {PLATFORM_META[selectedReview.platform].label}
+                </button>
+              )
             )}
 
             {published && <div style={{ textAlign: "center", fontSize: 13, color: "#22c55e", padding: "10px 0" }}>✓ Réponse publiée</div>}
@@ -998,7 +1027,7 @@ export default function ReviewsHub() {
 
             {activeNav === "alerts" && (
               <div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
                   <div className={`pill${alertsEtab === "all" ? " active" : ""}`} onClick={() => setAlertsEtab("all")}>Tous</div>
                   {establishments.map((e: Establishment) => (
                     <div key={e.id} className={`pill${alertsEtab === e.id ? " active" : ""}`} onClick={() => setAlertsEtab(e.id)}>
@@ -1007,21 +1036,41 @@ export default function ReviewsHub() {
                     </div>
                   ))}
                 </div>
-                {(alertsEtab === "all" ? negativeReviews : negativeReviews.filter((r: Review) => r.establishmentId === alertsEtab)).length === 0 ? (
-                  <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 32, textAlign: "center", color: "#5a5968", fontSize: 14 }}>Aucun avis négatif en attente</div>
-                ) : (alertsEtab === "all" ? negativeReviews : negativeReviews.filter((r: Review) => r.establishmentId === alertsEtab)).map((r) => (
-                  <div key={r.id} className="review-item" style={{ marginBottom: 8 }} onClick={() => { setSelectedReview(r); setAiReply(""); setPublished(false); setActiveNav("reviews"); }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: r.avatarColor + "22", color: r.avatarColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{r.initials}</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>{r.authorName}</div>
-                        <div style={{ fontSize: 12, color: "#7c7b89" }}>{r.date} · <span style={{ color: "#ef4444" }}>{"★".repeat(r.rating)}</span></div>
-                      </div>
-                      <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 10, fontWeight: 500, background: "rgba(239,68,68,0.12)", color: "#ef4444" }}>Urgent</span>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+                  <div className={`pill${alertsPlatform === "all" ? " active" : ""}`} onClick={() => setAlertsPlatform("all")}>Toutes les plateformes</div>
+                  {(Object.keys(PLATFORM_META) as Platform[]).map((p) => (
+                    <div key={p} className={`pill${alertsPlatform === p ? " active" : ""}`} onClick={() => setAlertsPlatform(p)}
+                      style={alertsPlatform === p ? { borderColor: PLATFORM_META[p].color, color: PLATFORM_META[p].color, background: PLATFORM_META[p].bg } : {}}>
+                      {PLATFORM_META[p].label}
                     </div>
-                    <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "rgba(238,237,244,0.75)" }}>&ldquo;{r.comment}&rdquo;</div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                {(() => {
+                  const alertsFiltered = negativeReviews.filter((r: Review) => {
+                    if (alertsEtab !== "all" && r.establishmentId !== alertsEtab) return false;
+                    if (alertsPlatform !== "all" && r.platform !== alertsPlatform) return false;
+                    return true;
+                  });
+                  return alertsFiltered.length === 0 ? (
+                    <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 32, textAlign: "center", color: "#5a5968", fontSize: 14 }}>Aucun avis négatif en attente</div>
+                  ) : alertsFiltered.map((r) => (
+                    <div key={r.id} className="review-item" style={{ marginBottom: 8 }} onClick={() => { setSelectedReview(r); setAiReply(""); setPublished(false); setActiveNav("reviews"); }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: r.avatarColor + "22", color: r.avatarColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{r.initials}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>{r.authorName}</div>
+                          <div style={{ fontSize: 12, color: "#7c7b89", display: "flex", gap: 8, alignItems: "center" }}>
+                            <span>{r.date}</span>
+                            <span style={{ color: "#ef4444" }}>{"★".repeat(r.rating)}</span>
+                            <PlatformBadge platform={r.platform} />
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 10, fontWeight: 500, background: "rgba(239,68,68,0.12)", color: "#ef4444" }}>Urgent</span>
+                      </div>
+                      <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "rgba(238,237,244,0.75)" }}>&ldquo;{r.comment}&rdquo;</div>
+                    </div>
+                  ));
+                })()}
               </div>
             )}
 
@@ -1060,6 +1109,20 @@ export default function ReviewsHub() {
                   <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: e.color, marginRight: 5 }} />
                   {e.name}
                 </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
+              <div className={`pill${dashPlatform === "all" ? " active" : ""}`} onClick={() => setDashPlatform("all")}>Toutes les plateformes</div>
+              {(Object.keys(PLATFORM_META) as Platform[]).map((p) => (
+                <div key={p} className={`pill${dashPlatform === p ? " active" : ""}`} onClick={() => setDashPlatform(p)}
+                  style={dashPlatform === p ? { borderColor: PLATFORM_META[p].color, color: PLATFORM_META[p].color, background: PLATFORM_META[p].bg } : {}}>
+                  {PLATFORM_META[p].label}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
+              {([["7d","7 jours"],["30d","30 jours"],["90d","90 jours"],["all","Tout"]] as const).map(([val, label]) => (
+                <div key={val} className={`pill${timeframe === val ? " active" : ""}`} onClick={() => setTimeframe(val)}>{label}</div>
               ))}
             </div>
 
@@ -1338,9 +1401,19 @@ export default function ReviewsHub() {
 
                 <>
 
-                  <button className="btn btn-primary" style={{ background: PLATFORM_META[selectedReview!.platform].color }} onClick={publishReply}>
-                    Publier sur {PLATFORM_META[selectedReview!.platform].label}
-                  </button>
+                  {selectedReview!.platform === "google" ? (
+                    <button className="btn btn-primary" style={{ background: PLATFORM_META["google"].color }} onClick={publishReply}>
+                      Publier sur Google
+                    </button>
+                  ) : (
+                    <button className="btn btn-primary" style={{ background: PLATFORM_META[selectedReview!.platform].color }} onClick={() => {
+                      navigator.clipboard.writeText(aiReply);
+                      showToast(`Réponse copiée ! Collez-la sur ${PLATFORM_META[selectedReview!.platform].label} ✓`, "success");
+                      publishReply();
+                    }}>
+                      📋 Copier pour {PLATFORM_META[selectedReview!.platform].label}
+                    </button>
+                  )}
 
                   <button className="btn btn-ghost" onClick={() => generateReply(selectedReview!)}>↺ Régénérer</button>
 
