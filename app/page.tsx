@@ -143,6 +143,8 @@ export default function ReviewsHub() {
 
   const [dashboardEtab, setDashboardEtab]   = useState<"all" | string>("all");
 
+  const [alertsEtab, setAlertsEtab]         = useState<"all" | string>("all");
+
   const [googleToken, setGoogleToken]       = useState("");
 
   const [googleConnected, setGoogleConnected] = useState(false);
@@ -843,31 +845,7 @@ export default function ReviewsHub() {
 
 
 
-          <div style={{ padding: "12px 16px 6px", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "#5a5968", fontWeight: 500 }}>Établissements</div>
-
-          <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 8px" }}>
-
-            {establishments.map((e) => (
-
-              <div key={e.id} className={`etab-item${selectedEtab === e.id ? " active" : ""}`} onClick={() => { setSelectedEtab(e.id); setSelectedReview(null); setAiReply(""); setSidebarOpen(false); }}>
-
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: e.color, flexShrink: 0 }} />
-
-                <div style={{ flex: 1 }}>
-
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{e.name}</div>
-
-                  <div style={{ fontSize: 11, color: "#fbbf24" }}>★ {e.avgRating}</div>
-
-                </div>
-
-                {e.pending > 0 && <span style={{ fontSize: 10, color: "#f59e0b", background: "rgba(245,158,11,0.12)", padding: "1px 6px", borderRadius: 10 }}>{e.pending}</span>}
-
-              </div>
-
-            ))}
-
-          </div>
+          <div style={{ flex: 1 }} />
 
 
 
@@ -908,11 +886,17 @@ export default function ReviewsHub() {
             <button className="mobile-menu-btn btn btn-ghost" style={{ padding: "6px 10px", fontSize: 18, display: "none" }} onClick={() => setSidebarOpen(true)}>☰</button>
 
             <div style={{ flex: 1, minWidth: 0 }}>
-
-              <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 15, fontWeight: 500 }}>Dashboard · </span>
-
-              <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 15, fontWeight: 500, color: etab.color }}>{etab.name}</span>
-
+              <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 15, fontWeight: 500 }}>
+                {activeNav === "dashboard" ? "Dashboard" : activeNav === "reviews" ? "Avis" : activeNav === "alerts" ? "Alertes" : activeNav === "settings" ? "Paramètres" : ""}
+              </span>
+              {(activeNav === "dashboard" || activeNav === "reviews" || activeNav === "alerts") && (
+                <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 15, fontWeight: 500, color: "#7c7b89" }}>
+                  {" · "}
+                  <span style={{ color: activeNav === "dashboard" ? (dashboardEtab === "all" ? "#eeedf4" : (establishments.find((e: Establishment) => e.id === dashboardEtab)?.color || "#eeedf4")) : activeNav === "reviews" ? etab.color : (alertsEtab === "all" ? "#eeedf4" : (establishments.find((e: Establishment) => e.id === alertsEtab)?.color || "#eeedf4")) }}>
+                    {activeNav === "dashboard" ? (dashboardEtab === "all" ? "Tous les restaurants" : establishments.find((e: Establishment) => e.id === dashboardEtab)?.name) : activeNav === "reviews" ? etab.name : (alertsEtab === "all" ? "Tous les restaurants" : establishments.find((e: Establishment) => e.id === alertsEtab)?.name)}
+                  </span>
+                </span>
+              )}
             </div>
 
             <div style={{ position: "relative" }}>
@@ -977,10 +961,18 @@ export default function ReviewsHub() {
 
             {activeNav === "alerts" && (
               <div>
-                <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Alertes — Avis négatifs</div>
-                {negativeReviews.length === 0 ? (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+                  <div className={`pill${alertsEtab === "all" ? " active" : ""}`} onClick={() => setAlertsEtab("all")}>Tous</div>
+                  {establishments.map((e: Establishment) => (
+                    <div key={e.id} className={`pill${alertsEtab === e.id ? " active" : ""}`} onClick={() => setAlertsEtab(e.id)}>
+                      <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: e.color, marginRight: 5 }} />
+                      {e.name}
+                    </div>
+                  ))}
+                </div>
+                {(alertsEtab === "all" ? negativeReviews : negativeReviews.filter((r: Review) => r.establishmentId === alertsEtab)).length === 0 ? (
                   <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 32, textAlign: "center", color: "#5a5968", fontSize: 14 }}>Aucun avis négatif en attente</div>
-                ) : negativeReviews.map((r) => (
+                ) : (alertsEtab === "all" ? negativeReviews : negativeReviews.filter((r: Review) => r.establishmentId === alertsEtab)).map((r) => (
                   <div key={r.id} className="review-item" style={{ marginBottom: 8 }} onClick={() => { setSelectedReview(r); setAiReply(""); setPublished(false); setActiveNav("reviews"); }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
                       <div style={{ width: 36, height: 36, borderRadius: "50%", background: r.avatarColor + "22", color: r.avatarColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{r.initials}</div>
@@ -1070,7 +1062,16 @@ export default function ReviewsHub() {
             </div>
             </>}
 
-            {activeNav === "reviews" && <><div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden" }}>
+            {activeNav === "reviews" && <>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+              {establishments.map((e: Establishment) => (
+                <div key={e.id} className={`pill${selectedEtab === e.id ? " active" : ""}`} onClick={() => { setSelectedEtab(e.id); setSelectedReview(null); setAiReply(""); }}>
+                  <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: e.color, marginRight: 5 }} />
+                  {e.name}
+                </div>
+              ))}
+            </div>
+            <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden" }}>
 
               <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
 
