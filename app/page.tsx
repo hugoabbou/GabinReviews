@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 
 
 
+type Platform = "google" | "ubereats" | "deliveroo";
+
 type Review = {
 
   id: string;
@@ -25,6 +27,8 @@ type Review = {
   reply?: string;
 
   establishmentId: string;
+
+  platform: Platform;
 
 };
 
@@ -68,21 +72,42 @@ const ESTABLISHMENTS: Establishment[] = [
 
 const MOCK_REVIEWS: Review[] = [
 
-  { id: "r1", authorName: "Marc Alain",     initials: "MA", avatarColor: "#ef4444", rating: 1, answered: false, establishmentId: "1", date: "Il y a 4 min",  comment: "Service absolument déplorable. J'ai attendu 45 minutes pour être servi et personne ne s'est excusé. La qualité ne correspond pas au prix pratiqué. Je ne reviendrai jamais." },
+  { id: "r1", authorName: "Marc Alain",     initials: "MA", avatarColor: "#ef4444", rating: 1, answered: false, establishmentId: "1", date: "Il y a 4 min",  platform: "google",    comment: "Service absolument déplorable. J'ai attendu 45 minutes pour être servi et personne ne s'est excusé. La qualité ne correspond pas au prix pratiqué. Je ne reviendrai jamais." },
 
-  { id: "r2", authorName: "Sophie Bernard", initials: "SB", avatarColor: "#22c55e", rating: 5, answered: false, establishmentId: "1", date: "Hier",           comment: "Expérience parfaite de bout en bout. L'équipe est aux petits soins, l'ambiance est chaleureuse. Je recommande vivement !" },
+  { id: "r2", authorName: "Sophie Bernard", initials: "SB", avatarColor: "#22c55e", rating: 5, answered: false, establishmentId: "1", date: "Hier",           platform: "google",    comment: "Expérience parfaite de bout en bout. L'équipe est aux petits soins, l'ambiance est chaleureuse. Je recommande vivement !" },
 
-  { id: "r3", authorName: "Thomas Dupont",  initials: "TD", avatarColor: "#4f7cff", rating: 4, answered: true,  establishmentId: "1", date: "Il y a 2 jours", comment: "Très bon dans l'ensemble. Quelques détails à améliorer sur les temps d'attente mais l'accueil est excellent." },
+  { id: "r3", authorName: "Thomas Dupont",  initials: "TD", avatarColor: "#4f7cff", rating: 4, answered: true,  establishmentId: "1", date: "Il y a 2 jours", platform: "ubereats",  comment: "Très bon dans l'ensemble. Quelques détails à améliorer sur les temps d'attente mais l'accueil est excellent." },
 
-  { id: "r4", authorName: "Julie Martin",   initials: "JM", avatarColor: "#a855f7", rating: 3, answered: false, establishmentId: "2", date: "Il y a 3 jours", comment: "Correct sans plus. Le personnel est sympa mais l'attente était un peu longue pour un mercredi midi." },
+  { id: "r4", authorName: "Julie Martin",   initials: "JM", avatarColor: "#a855f7", rating: 3, answered: false, establishmentId: "2", date: "Il y a 3 jours", platform: "deliveroo", comment: "Correct sans plus. Le personnel est sympa mais l'attente était un peu longue pour un mercredi midi." },
 
-  { id: "r5", authorName: "Pierre Leclerc", initials: "PL", avatarColor: "#06b6d4", rating: 5, answered: true,  establishmentId: "2", date: "Il y a 4 jours", comment: "Excellent comme toujours ! La meilleure adresse de Lyon sans hésitation." },
+  { id: "r5", authorName: "Pierre Leclerc", initials: "PL", avatarColor: "#06b6d4", rating: 5, answered: true,  establishmentId: "2", date: "Il y a 4 jours", platform: "google",    comment: "Excellent comme toujours ! La meilleure adresse de Lyon sans hésitation." },
 
-  { id: "r6", authorName: "Camille Roux",   initials: "CR", avatarColor: "#f97316", rating: 2, answered: false, establishmentId: "3", date: "Il y a 5 jours", comment: "Déçue par cette visite. L'accueil était froid et les produits n'étaient pas frais." },
+  { id: "r6", authorName: "Camille Roux",   initials: "CR", avatarColor: "#f97316", rating: 2, answered: false, establishmentId: "3", date: "Il y a 5 jours", platform: "ubereats",  comment: "Déçue par cette visite. L'accueil était froid et les produits n'étaient pas frais." },
+
+  { id: "r7", authorName: "Antoine Morel",  initials: "AM", avatarColor: "#8b5cf6", rating: 4, answered: false, establishmentId: "1", date: "Il y a 6 jours", platform: "deliveroo", comment: "Livraison rapide et plats bien emballés. La qualité était au rendez-vous, je recommande !" },
+
+  { id: "r8", authorName: "Lucie Fontaine", initials: "LF", avatarColor: "#ec4899", rating: 2, answered: false, establishmentId: "2", date: "Il y a 1 sem.",  platform: "ubereats",  comment: "Commande incomplète, un article manquait. Le service client n'a pas répondu rapidement." },
+
+  { id: "r9", authorName: "Hugo Garnier",   initials: "HG", avatarColor: "#14b8a6", rating: 5, answered: false, establishmentId: "3", date: "Il y a 1 sem.",  platform: "deliveroo", comment: "Parfait comme d'habitude. Les portions sont généreuses et tout était chaud à la livraison." },
 
 ];
 
 
+
+const PLATFORM_META: Record<Platform, { label: string; color: string; bg: string; icon: string }> = {
+  google:    { label: "Google",    color: "#4285F4", bg: "rgba(66,133,244,0.12)",  icon: "G" },
+  ubereats:  { label: "Uber Eats", color: "#06c167", bg: "rgba(6,193,103,0.12)",   icon: "U" },
+  deliveroo: { label: "Deliveroo", color: "#00ccbc", bg: "rgba(0,204,188,0.12)",   icon: "D" },
+};
+
+function PlatformBadge({ platform }: { platform: Platform }) {
+  const m = PLATFORM_META[platform];
+  return (
+    <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 8, fontWeight: 600, background: m.bg, color: m.color, letterSpacing: 0.2 }}>
+      {m.label}
+    </span>
+  );
+}
 
 function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
 
@@ -147,6 +172,8 @@ export default function ReviewsHub() {
   const [dashboardEtab, setDashboardEtab]   = useState<"all" | string>("all");
 
   const [alertsEtab, setAlertsEtab]         = useState<"all" | string>("all");
+
+  const [platformFilter, setPlatformFilter] = useState<"all" | Platform>("all");
 
   const [googleToken, setGoogleToken]       = useState("");
 
@@ -287,7 +314,8 @@ export default function ReviewsHub() {
           date: rev.createTime ? new Date(rev.createTime).toLocaleDateString("fr-FR") : "Date inconnue",
           answered: !!rev.reviewReply,
           reply: rev.reviewReply?.comment || "",
-          establishmentId: realEtabs[0].id
+          establishmentId: realEtabs[0].id,
+          platform: "google" as Platform,
         }));
         setReviews(googleReviews);
       }
@@ -309,6 +337,8 @@ export default function ReviewsHub() {
   const etabReviews = reviews.filter((r) => r.establishmentId === selectedEtab);
 
   const filteredReviews = etabReviews.filter((r) => {
+
+    if (platformFilter !== "all" && r.platform !== platformFilter) return false;
 
     if (filter === "pending")  return !r.answered;
 
@@ -374,7 +404,8 @@ export default function ReviewsHub() {
       ? `\n\nVoici des exemples de réponses déjà publiées, adopte exactement le même style, ton et vocabulaire :\n${exampleText}`
       : "";
 
-    const prompt = `Tu gères les avis Google de "${etab.name}". Client: ${review.authorName}, note: ${review.rating}/5. Avis: "${review.comment}". ${toneMap[tone]} Réponds en français, 80 mots max. Uniquement le texte de la réponse.${styleContext}`;
+    const platformLabel = PLATFORM_META[review.platform].label;
+    const prompt = `Tu gères les avis ${platformLabel} de "${etab.name}". Client: ${review.authorName}, note: ${review.rating}/5. Avis: "${review.comment}". ${toneMap[tone]} Réponds en français, 80 mots max. Uniquement le texte de la réponse.${styleContext}`;
 
 
 
@@ -498,7 +529,7 @@ export default function ReviewsHub() {
 
     setPublished(true);
 
-    showToast("Réponse publiée sur Google ✓", "success");
+    showToast(`Réponse publiée sur ${PLATFORM_META[selectedReview.platform].label} ✓`, "success");
 
   };
 
@@ -787,7 +818,9 @@ export default function ReviewsHub() {
 
             {aiReply && !generating && !published && (
 
-              <button className="btn btn-primary" style={{ width: "100%", background: "#22c55e" }} onClick={publishReply}>Publier sur Google</button>
+              <button className="btn btn-primary" style={{ width: "100%", background: PLATFORM_META[selectedReview.platform].color }} onClick={publishReply}>
+                Publier sur {PLATFORM_META[selectedReview.platform].label}
+              </button>
 
             )}
 
@@ -1076,6 +1109,15 @@ export default function ReviewsHub() {
                 </div>
               ))}
             </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
+              <div className={`pill${platformFilter === "all" ? " active" : ""}`} onClick={() => setPlatformFilter("all")}>Toutes les plateformes</div>
+              {(Object.keys(PLATFORM_META) as Platform[]).map((p) => (
+                <div key={p} className={`pill${platformFilter === p ? " active" : ""}`} onClick={() => setPlatformFilter(p)}
+                  style={platformFilter === p ? { borderColor: PLATFORM_META[p].color, color: PLATFORM_META[p].color, background: PLATFORM_META[p].bg } : {}}>
+                  {PLATFORM_META[p].label}
+                </div>
+              ))}
+            </div>
             <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden" }}>
 
               <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -1129,6 +1171,8 @@ export default function ReviewsHub() {
                           <span>{review.date}</span>
 
                           <Stars rating={review.rating} size={12} />
+
+                          <PlatformBadge platform={review.platform} />
 
                         </div>
 
@@ -1288,13 +1332,15 @@ export default function ReviewsHub() {
 
               {published ? (
 
-                <div style={{ textAlign: "center", fontSize: 13, color: "#22c55e", padding: "10px 0" }}>✓ Réponse publiée sur Google</div>
+                <div style={{ textAlign: "center", fontSize: 13, color: "#22c55e", padding: "10px 0" }}>✓ Réponse publiée sur {PLATFORM_META[selectedReview!.platform].label}</div>
 
               ) : (
 
                 <>
 
-                  <button className="btn btn-primary" onClick={publishReply}>Publier sur Google</button>
+                  <button className="btn btn-primary" style={{ background: PLATFORM_META[selectedReview!.platform].color }} onClick={publishReply}>
+                    Publier sur {PLATFORM_META[selectedReview!.platform].label}
+                  </button>
 
                   <button className="btn btn-ghost" onClick={() => generateReply(selectedReview!)}>↺ Régénérer</button>
 
