@@ -118,7 +118,10 @@ export default function ReviewsHub() {
 
   const [generating, setGenerating]         = useState(false);
 
-  const [apiKey, setApiKey]                 = useState("");
+  const [apiKey, setApiKey]                 = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("reviewshub_api_key") || "";
+    return "";
+  });
 
   const [toneExamples, setToneExamples]     = useState(() => {
     if (typeof window !== "undefined") return localStorage.getItem("reviewshub_tone_examples") || "";
@@ -707,6 +710,7 @@ export default function ReviewsHub() {
 
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => {
                 if (apiKey.length > 10) {
+                  localStorage.setItem("reviewshub_api_key", apiKey);
                   localStorage.setItem("reviewshub_tone_examples", toneExamples);
                   setShowApiModal(false);
                   showToast("Paramètres enregistrés ✓", "success");
@@ -1004,7 +1008,8 @@ export default function ReviewsHub() {
                   </div>
                   <button className="btn btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => {
                     if (apiKey.length > 10) {
-                      localStorage.setItem("reviewshub_tone_examples", toneExamples);
+                      localStorage.setItem("reviewshub_api_key", apiKey);
+                  localStorage.setItem("reviewshub_tone_examples", toneExamples);
                       showToast("Paramètres enregistrés ✓", "success");
                     } else {
                       showToast("Clé API invalide", "error");
