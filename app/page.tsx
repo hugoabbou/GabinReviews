@@ -970,9 +970,85 @@ export default function ReviewsHub() {
 
           <div className="content-responsive" style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
 
+            {activeNav === "alerts" && (
+              <div>
+                <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Alertes — Avis négatifs</div>
+                {negativeReviews.length === 0 ? (
+                  <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 32, textAlign: "center", color: "#5a5968", fontSize: 14 }}>Aucun avis négatif en attente</div>
+                ) : negativeReviews.map((r) => (
+                  <div key={r.id} className="review-item" style={{ marginBottom: 8 }} onClick={() => { setSelectedReview(r); setAiReply(""); setPublished(false); setActiveNav("reviews"); }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: r.avatarColor + "22", color: r.avatarColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{r.initials}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>{r.authorName}</div>
+                        <div style={{ fontSize: 12, color: "#7c7b89" }}>{r.date} · <span style={{ color: "#ef4444" }}>{"★".repeat(r.rating)}</span></div>
+                      </div>
+                      <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 10, fontWeight: 500, background: "rgba(239,68,68,0.12)", color: "#ef4444" }}>Urgent</span>
+                    </div>
+                    <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "rgba(238,237,244,0.75)" }}>&ldquo;{r.comment}&rdquo;</div>
+                  </div>
+                ))}
+              </div>
+            )}
 
+            {activeNav === "analytics" && (
+              <div>
+                <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Analytiques</div>
+                <div className="stats-grid-responsive" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
+                  {establishments.map((e) => (
+                    <div key={e.id} style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "14px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: e.color }} />
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>{e.name}</div>
+                      </div>
+                      <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 22, fontWeight: 600, color: "#fbbf24" }}>★ {e.avgRating}</div>
+                      <div style={{ fontSize: 12, color: "#7c7b89", marginTop: 4 }}>{e.total} avis · {e.pending} en attente</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 20 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 16 }}>Distribution des notes — {establishments.find(e => e.id === selectedEtab)?.name}</div>
+                  {ratingDist.map(({ star, count, pct }) => (
+                    <div key={star} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                      <span style={{ fontSize: 12, color: "#7c7b89", width: 8 }}>{star}</span>
+                      <div style={{ flex: 1, height: 8, background: "#21212b", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ height: "100%", borderRadius: 4, background: star >= 4 ? "#fbbf24" : star === 3 ? "#f59e0b" : "#ef4444", width: `${pct}%`, transition: "width .6s ease" }} />
+                      </div>
+                      <span style={{ fontSize: 12, color: "#7c7b89", width: 24, textAlign: "right" }}>{count}</span>
+                      <span style={{ fontSize: 12, color: "#5a5968", width: 32, textAlign: "right" }}>{pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            <div className="stats-grid-responsive" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+            {activeNav === "settings" && (
+              <div>
+                <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Paramètres</div>
+                <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, maxWidth: 540, display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#eeedf4", marginBottom: 6 }}>Clé API Gemini</div>
+                    <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 10, lineHeight: 1.5 }}>Entre ta clé depuis <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: "#4f7cff" }}>aistudio.google.com</a></div>
+                    <input className="input-field" type="password" placeholder="AIza..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#eeedf4", marginBottom: 6 }}>Exemples de réponses publiées</div>
+                    <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 10, lineHeight: 1.5 }}>Colle ici 2-3 réponses que tu as déjà publiées sur Google. L'IA imitera ton style et ton vocabulaire.</div>
+                    <textarea className="input-field" rows={5} placeholder={"Exemple 1 : Merci beaucoup pour votre retour...\n\nExemple 2 : Nous sommes ravis de..."} value={toneExamples} onChange={(e) => setToneExamples(e.target.value)} style={{ resize: "vertical" }} />
+                  </div>
+                  <button className="btn btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => {
+                    if (apiKey.length > 10) {
+                      localStorage.setItem("reviewshub_tone_examples", toneExamples);
+                      showToast("Paramètres enregistrés ✓", "success");
+                    } else {
+                      showToast("Clé API invalide", "error");
+                    }
+                  }}>Enregistrer</button>
+                </div>
+              </div>
+            )}
+
+            {(activeNav === "dashboard" || activeNav === "reviews") && <><div className="stats-grid-responsive" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
 
               {[
 
@@ -1131,6 +1207,7 @@ export default function ReviewsHub() {
               </div>
 
             </div>
+            </>}
 
           </div>
 
