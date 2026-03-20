@@ -141,6 +141,8 @@ export default function ReviewsHub() {
 
   const [seenAlerts, setSeenAlerts]         = useState<Set<string>>(new Set());
 
+  const [dashboardEtab, setDashboardEtab]   = useState<"all" | string>("all");
+
   const [googleToken, setGoogleToken]       = useState("");
 
   const [googleConnected, setGoogleConnected] = useState(false);
@@ -497,18 +499,23 @@ export default function ReviewsHub() {
 
 
 
-  const ratingDist = [5, 4, 3, 2, 1].map((star) => ({
 
+  const dashReviews = dashboardEtab === "all" ? reviews : reviews.filter((r: Review) => r.establishmentId === dashboardEtab);
+
+  const dashAvgRating = dashboardEtab === "all"
+    ? (establishments.reduce((s: number, e: Establishment) => s + e.avgRating, 0) / Math.max(establishments.length, 1)).toFixed(1)
+    : (establishments.find((e: Establishment) => e.id === dashboardEtab)?.avgRating ?? 0);
+
+  const dashTotal = dashboardEtab === "all"
+    ? establishments.reduce((s: number, e: Establishment) => s + e.total, 0)
+    : (dashReviews.length || establishments.find((e: Establishment) => e.id === dashboardEtab)?.total || 0);
+
+  const dashRatingDist = [5, 4, 3, 2, 1].map((star) => ({
     star,
-
-    count: etabReviews.filter((r) => r.rating === star).length,
-
-    pct: etabReviews.length
-
-      ? Math.round((etabReviews.filter((r) => r.rating === star).length / etabReviews.length) * 100)
-
+    count: dashReviews.filter((r: Review) => r.rating === star).length,
+    pct: dashReviews.length
+      ? Math.round((dashReviews.filter((r: Review) => r.rating === star).length / dashReviews.length) * 100)
       : 0,
-
   }));
 
 
@@ -520,8 +527,6 @@ export default function ReviewsHub() {
     { id: "reviews",   icon: "💬", label: "Avis",       badge: pendingCount || undefined },
 
     { id: "alerts",    icon: "🔔", label: "Alertes",    badge: 1 },
-
-    { id: "analytics", icon: "📊", label: "Analytiques" },
 
     { id: "settings",  icon: "⚙️",  label: "Paramètres" },
 
@@ -991,37 +996,6 @@ export default function ReviewsHub() {
               </div>
             )}
 
-            {activeNav === "analytics" && (
-              <div>
-                <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Analytiques</div>
-                <div className="stats-grid-responsive" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
-                  {establishments.map((e) => (
-                    <div key={e.id} style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "14px 16px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: e.color }} />
-                        <div style={{ fontSize: 13, fontWeight: 500 }}>{e.name}</div>
-                      </div>
-                      <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 22, fontWeight: 600, color: "#fbbf24" }}>★ {e.avgRating}</div>
-                      <div style={{ fontSize: 12, color: "#7c7b89", marginTop: 4 }}>{e.total} avis · {e.pending} en attente</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 16 }}>Distribution des notes — {establishments.find(e => e.id === selectedEtab)?.name}</div>
-                  {ratingDist.map(({ star, count, pct }) => (
-                    <div key={star} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                      <span style={{ fontSize: 12, color: "#7c7b89", width: 8 }}>{star}</span>
-                      <div style={{ flex: 1, height: 8, background: "#21212b", borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{ height: "100%", borderRadius: 4, background: star >= 4 ? "#fbbf24" : star === 3 ? "#f59e0b" : "#ef4444", width: `${pct}%`, transition: "width .6s ease" }} />
-                      </div>
-                      <span style={{ fontSize: 12, color: "#7c7b89", width: 24, textAlign: "right" }}>{count}</span>
-                      <span style={{ fontSize: 12, color: "#5a5968", width: 32, textAlign: "right" }}>{pct}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {activeNav === "settings" && (
               <div>
                 <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Paramètres</div>
@@ -1048,79 +1022,55 @@ export default function ReviewsHub() {
               </div>
             )}
 
-            {(activeNav === "dashboard" || activeNav === "reviews") && <><div className="stats-grid-responsive" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
-
-              {[
-
-                { label: "Note moy.", value: etab.avgRating, color: "#fbbf24", trend: "↑ +0.2", tc: "#22c55e" },
-
-                { label: "Total avis", value: etabReviews.length || etab.total, color: "#eeedf4", trend: "↑ +18", tc: "#22c55e" },
-
-                { label: "Sans réponse", value: etabReviews.filter((r) => !r.answered).length, color: "#ef4444", trend: "À traiter", tc: "#ef4444" },
-
-                { label: "Taux réponse", value: `${Math.round(etabReviews.filter((r) => r.answered).length / Math.max(etabReviews.length, 1) * 100)}%`, color: "#22c55e", trend: "↑ +3%", tc: "#22c55e" },
-
-              ].map((s, i) => (
-
-                <div key={i} style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "14px 16px" }}>
-
-                  <div style={{ fontSize: 10, color: "#7c7b89", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>{s.label}</div>
-
-                  <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 22, fontWeight: 600, color: s.color }}>{s.value}</div>
-
-                  <div style={{ fontSize: 11, marginTop: 4, color: s.tc }}>{s.trend}</div>
-
+            {activeNav === "dashboard" && <>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+              <div className={`pill${dashboardEtab === "all" ? " active" : ""}`} onClick={() => setDashboardEtab("all")}>Tous</div>
+              {establishments.map((e: Establishment) => (
+                <div key={e.id} className={`pill${dashboardEtab === e.id ? " active" : ""}`} onClick={() => setDashboardEtab(e.id)}>
+                  <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: e.color, marginRight: 5 }} />
+                  {e.name}
                 </div>
-
               ))}
-
             </div>
 
-
+            <div className="stats-grid-responsive" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+              {[
+                { label: "Note moy.", value: dashAvgRating, color: "#fbbf24", trend: "↑ +0.2", tc: "#22c55e" },
+                { label: "Total avis", value: dashTotal, color: "#eeedf4", trend: "↑ +18", tc: "#22c55e" },
+                { label: "Sans réponse", value: dashReviews.filter((r: Review) => !r.answered).length, color: "#ef4444", trend: "À traiter", tc: "#ef4444" },
+                { label: "Taux réponse", value: `${Math.round(dashReviews.filter((r: Review) => r.answered).length / Math.max(dashReviews.length, 1) * 100)}%`, color: "#22c55e", trend: "↑ +3%", tc: "#22c55e" },
+              ].map((s, i) => (
+                <div key={i} style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "14px 16px" }}>
+                  <div style={{ fontSize: 10, color: "#7c7b89", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>{s.label}</div>
+                  <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 22, fontWeight: 600, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: 11, marginTop: 4, color: s.tc }}>{s.trend}</div>
+                </div>
+              ))}
+            </div>
 
             <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 20 }}>
-
               <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
-
                 <div>
-
-                  <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 42, fontWeight: 600, lineHeight: 1 }}>{etab.avgRating}</div>
-
+                  <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 42, fontWeight: 600, lineHeight: 1 }}>{dashAvgRating}</div>
                   <div style={{ fontSize: 18, color: "#fbbf24", letterSpacing: 2, margin: "6px 0 4px" }}>★★★★★</div>
-
-                  <div style={{ fontSize: 13, color: "#7c7b89" }}>sur {etabReviews.length || etab.total} avis</div>
-
+                  <div style={{ fontSize: 13, color: "#7c7b89" }}>sur {dashTotal} avis</div>
                 </div>
-
                 <div style={{ flex: 1, minWidth: 180 }}>
-
-                  {ratingDist.map(({ star, count, pct }) => (
-
+                  {dashRatingDist.map(({ star, count, pct }) => (
                     <div key={star} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
-
                       <span style={{ fontSize: 12, color: "#7c7b89", width: 8 }}>{star}</span>
-
                       <div style={{ flex: 1, height: 6, background: "#21212b", borderRadius: 3, overflow: "hidden" }}>
-
                         <div style={{ height: "100%", borderRadius: 3, background: star >= 4 ? "#fbbf24" : star === 3 ? "#f59e0b" : "#ef4444", width: `${pct}%`, transition: "width .6s ease" }} />
-
                       </div>
-
                       <span style={{ fontSize: 12, color: "#7c7b89", width: 24, textAlign: "right" }}>{count}</span>
-
                     </div>
-
                   ))}
-
                 </div>
-
               </div>
-
             </div>
+            </>}
 
-
-
-            <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden" }}>
+            {activeNav === "reviews" && <><div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden" }}>
 
               <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
 
@@ -1206,8 +1156,7 @@ export default function ReviewsHub() {
 
               </div>
 
-            </div>
-            </>}
+            </div></>}
 
           </div>
 
