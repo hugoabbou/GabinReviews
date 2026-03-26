@@ -821,15 +821,26 @@ export default function ReviewsHub() {
 
             </div>
 
-            <div style={{ background: "#21212b", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: 14, fontSize: 13, lineHeight: 1.65, color: "rgba(238,237,244,0.9)", minHeight: 120 }}>
-
-              {!aiReply && !generating && <span style={{ color: "#5a5968", fontStyle: "italic" }}>Cliquez sur &ldquo;Générer&rdquo;…</span>}
-
-              {generating && !aiReply && <span style={{ color: "#7c7b89", fontStyle: "italic" }}>Génération en cours<span className="ai-cursor" /></span>}
-
-              {aiReply && <>{aiReply}{generating && <span className="ai-cursor" />}</>}
-
-            </div>
+            {!aiReply && !generating && (
+              <div style={{ background: "#21212b", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: 14, fontSize: 13, minHeight: 120, color: "#5a5968", fontStyle: "italic" }}>
+                Cliquez sur &ldquo;Générer&rdquo;…
+              </div>
+            )}
+            {generating && !aiReply && (
+              <div style={{ background: "#21212b", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: 14, fontSize: 13, minHeight: 120, color: "#7c7b89", fontStyle: "italic" }}>
+                Génération en cours<span className="ai-cursor" />
+              </div>
+            )}
+            {aiReply && (
+              <textarea
+                className="input-field"
+                rows={6}
+                value={aiReply + (generating ? " ▍" : "")}
+                onChange={(e) => setAiReply(e.target.value)}
+                readOnly={generating}
+                style={{ resize: "vertical", lineHeight: 1.65, minHeight: 120 }}
+              />
+            )}
 
             <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => generateReply(selectedReview)} disabled={generating}>
 
@@ -1362,15 +1373,26 @@ export default function ReviewsHub() {
 
                   </div>
 
-                  <div style={{ background: "#21212b", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: 14, fontSize: 13, lineHeight: 1.65, color: "rgba(238,237,244,0.9)", minHeight: 120 }}>
-
-                    {!aiReply && !generating && <span style={{ color: "#5a5968", fontStyle: "italic" }}>Cliquez sur &ldquo;Générer&rdquo;…</span>}
-
-                    {generating && !aiReply && <span style={{ color: "#7c7b89", fontStyle: "italic" }}>Génération en cours<span className="ai-cursor" /></span>}
-
-                    {aiReply && <>{aiReply}{generating && <span className="ai-cursor" />}</>}
-
-                  </div>
+                  {!aiReply && !generating && (
+                    <div style={{ background: "#21212b", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: 14, fontSize: 13, minHeight: 120, color: "#5a5968", fontStyle: "italic" }}>
+                      Cliquez sur &ldquo;Générer&rdquo;…
+                    </div>
+                  )}
+                  {generating && !aiReply && (
+                    <div style={{ background: "#21212b", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: 14, fontSize: 13, minHeight: 120, color: "#7c7b89", fontStyle: "italic" }}>
+                      Génération en cours<span className="ai-cursor" />
+                    </div>
+                  )}
+                  {aiReply && (
+                    <textarea
+                      className="input-field"
+                      rows={6}
+                      value={aiReply + (generating ? " ▍" : "")}
+                      onChange={(e) => setAiReply(e.target.value)}
+                      readOnly={generating}
+                      style={{ resize: "vertical", lineHeight: 1.65, minHeight: 120 }}
+                    />
+                  )}
 
                 </div>
 
