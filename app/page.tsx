@@ -261,7 +261,11 @@ export default function ReviewsHub() {
 
     const accountsData = await accountsRes.json();
 
-    if (!accountsData.accounts?.length) return;
+    if (!accountsData.accounts?.length) {
+      const errMsg = accountsData.error?.message || accountsData.error?.status || JSON.stringify(accountsData);
+      showToast("Google API : " + errMsg, "error");
+      return;
+    }
 
     const accountId = accountsData.accounts[0].name.split("/")[1];
 
