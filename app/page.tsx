@@ -881,19 +881,19 @@ export default function ReviewsHub() {
             </button>
 
             {aiReply && !generating && !published && (
-              selectedReview.platform === "google" ? (
-                <button className="btn btn-primary" style={{ width: "100%", background: PLATFORM_META["google"].color }} onClick={publishReply}>
-                  Publier sur Google
-                </button>
-              ) : (
-                <button className="btn btn-primary" style={{ width: "100%", background: PLATFORM_META[selectedReview.platform].color }} onClick={() => {
+              <>
+                {selectedReview.platform === "google" && (
+                  <button className="btn btn-primary" style={{ width: "100%", background: PLATFORM_META["google"].color }} onClick={publishReply}>
+                    Publier sur Google
+                  </button>
+                )}
+                <button className="btn btn-ghost" style={{ width: "100%" }} onClick={() => {
                   navigator.clipboard.writeText(aiReply);
-                  showToast(`Réponse copiée ! Collez-la sur ${PLATFORM_META[selectedReview.platform].label} ✓`, "success");
-                  publishReply();
+                  showToast("Réponse copiée ✓", "success");
                 }}>
-                  📋 Copier pour {PLATFORM_META[selectedReview.platform].label}
+                  📋 Copier
                 </button>
-              )
+              </>
             )}
 
             {published && <div style={{ textAlign: "center", fontSize: 13, color: "#22c55e", padding: "10px 0" }}>✓ Réponse publiée</div>}
@@ -1467,19 +1467,18 @@ export default function ReviewsHub() {
 
                 <>
 
-                  {selectedReview!.platform === "google" ? (
+                  {selectedReview!.platform === "google" && (
                     <button className="btn btn-primary" style={{ background: PLATFORM_META["google"].color }} onClick={publishReply}>
                       Publier sur Google
                     </button>
-                  ) : (
-                    <button className="btn btn-primary" style={{ background: PLATFORM_META[selectedReview!.platform].color }} onClick={() => {
-                      navigator.clipboard.writeText(aiReply);
-                      showToast(`Réponse copiée ! Collez-la sur ${PLATFORM_META[selectedReview!.platform].label} ✓`, "success");
-                      publishReply();
-                    }}>
-                      📋 Copier pour {PLATFORM_META[selectedReview!.platform].label}
-                    </button>
                   )}
+
+                  <button className="btn btn-ghost" style={{ width: "100%" }} onClick={() => {
+                    navigator.clipboard.writeText(aiReply);
+                    showToast("Réponse copiée ✓", "success");
+                  }}>
+                    📋 Copier
+                  </button>
 
                   <button className="btn btn-ghost" onClick={() => generateReply(selectedReview!)}>↺ Régénérer</button>
 
