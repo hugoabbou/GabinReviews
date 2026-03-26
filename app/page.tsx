@@ -195,9 +195,9 @@ export default function ReviewsHub() {
 
   const [googleConnected, setGoogleConnected] = useState(false);
 
-  const [gmbAccountId, setGmbAccountId]     = useState("");
+  const [gmbAccountId, setGmbAccountId]     = useState(() => localStorage.getItem("gmb_account_id") || "");
 
-  const [gmbLocationId, setGmbLocationId]   = useState("");
+  const [gmbLocationId, setGmbLocationId]   = useState(() => localStorage.getItem("gmb_location_id") || "");
 
 
 
@@ -237,7 +237,15 @@ export default function ReviewsHub() {
 
         setGoogleConnected(true);
 
-        loadGoogleReviews(saved);
+        // Si les IDs sont déjà en cache, charge directement les avis sans rappeler Account Management API
+        const cachedAccount  = localStorage.getItem("gmb_account_id");
+        const cachedLocation = localStorage.getItem("gmb_location_id");
+
+        if (cachedAccount && cachedLocation) {
+          loadReviewsOnly(saved, cachedAccount, cachedLocation);
+        } else {
+          loadGoogleReviews(saved);
+        }
 
       }
 
@@ -313,32 +321,11 @@ export default function ReviewsHub() {
 
       setGmbLocationId(realEtabs[0].id);
 
-      // 3. Récupère les avis du premier établissement trouvé
+      // Cache IDs so subsequent page loads skip the Account Management API call
+      localStorage.setItem("gmb_account_id",  accountId);
+      localStorage.setItem("gmb_location_id", realEtabs[0].id);
 
-      const reviewsRes = await fetch(`/api/reviews/gmb?accountId=${accountId}&locationId=${realEtabs[0].id}`, {
-
-        headers: { "x-google-token": token },
-
-      });
-
-      const reviewsData = await reviewsRes.json();
-
-      if (reviewsData.reviews?.length) {
-        const googleReviews: Review[] = reviewsData.reviews.map((rev: any) => ({
-          id: rev.name,
-          authorName: rev.reviewer?.displayName || "Anonyme",
-          initials: (rev.reviewer?.displayName || "A").substring(0, 2).toUpperCase(),
-          avatarColor: ["#ef4444", "#22c55e", "#4f7cff", "#a855f7", "#06b6d4", "#f97316"][Math.floor(Math.random() * 6)],
-          rating: { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[rev.starRating as string] || 3,
-          comment: rev.reviewText || "",
-          date: rev.createTime ? new Date(rev.createTime).toLocaleDateString("fr-FR") : "Date inconnue",
-          answered: !!rev.reviewReply,
-          reply: rev.reviewReply?.comment || "",
-          establishmentId: realEtabs[0].id,
-          platform: "google" as Platform,
-        }));
-        setReviews(googleReviews);
-      }
+      await loadReviewsOnly(token, accountId, realEtabs[0].id);
 
     }
 
@@ -350,7 +337,39 @@ export default function ReviewsHub() {
 
 };
 
-
+  const loadReviewsOnly = async (token: string, accountId: string, locationId: string) => {
+    try {
+      const reviewsRes = await fetch(`/api/reviews/gmb?accountId=${accountId}&locationId=${locationId}`, {
+        headers: { "x-google-token": token },
+      });
+      const reviewsData = await reviewsRes.json();
+      if (reviewsData.reviews?.length) {
+        const googleReviews: Review[] = reviewsData.reviews.map((rev: any) => ({
+          id: rev.name,
+          authorName: rev.reviewer?.displayName || "Anonyme",
+          initials: (rev.reviewer?.displayName || "A").substring(0, 2).toUpperCase(),
+          avatarColor: ["#ef4444", "#22c55e", "#4f7cff", "#a855f7", "#06b6d4", "#f97316"][Math.floor(Math.random() * 6)],
+          rating: { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[rev.starRating as string] || 3,
+          comment: rev.reviewText || "",
+          date: rev.createTime ? new Date(rev.createTime).toLocaleDateString("fr-FR") : "Date inconnue",
+          answered: !!rev.reviewReply,
+          reply: rev.reviewReply?.comment || "",
+          establishmentId: locationId,
+          platform: "google" as Platform,
+          dateTs: rev.createTime ? new Date(rev.createTime).getTime() : undefined,
+        }));
+        setReviews(googleReviews);
+        setEstablishments((prev) => prev.length ? prev : [{ id: locationId, name: "Mon établissement", color: "#4f7cff", avgRating: 0, total: googleReviews.length, pending: googleReviews.filter((r) => !r.answered).length }]);
+        setSelectedEtab(locationId);
+        setGmbAccountId(accountId);
+        setGmbLocationId(locationId);
+      } else if (reviewsData.error) {
+        showToast("Google API : " + (reviewsData.error?.message || JSON.stringify(reviewsData.error)), "error");
+      }
+    } catch (e) {
+      console.error("Erreur chargement avis:", e);
+    }
+  };
 
  const etab = establishments.find((e) => e.id === selectedEtab) || establishments[0];
 
