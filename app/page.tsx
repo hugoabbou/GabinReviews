@@ -1429,7 +1429,7 @@ export default function ReviewsHub() {
                   {aiReply && (
                     <textarea
                       className="input-field"
-                      rows={6}
+                      rows={14}
                       value={aiReply + (generating ? " ▍" : "")}
                       onChange={(e) => setAiReply(e.target.value)}
                       readOnly={generating}
