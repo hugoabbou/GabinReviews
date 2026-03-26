@@ -861,7 +861,7 @@ export default function ReviewsHub() {
             {aiReply && (
               <textarea
                 className="input-field"
-                rows={6}
+                rows={14}
                 value={aiReply + (generating ? " ▍" : "")}
                 onChange={(e) => setAiReply(e.target.value)}
                 readOnly={generating}
@@ -1327,7 +1327,7 @@ export default function ReviewsHub() {
 
 
 
-        <div className="desktop-panel" style={{ width: 320, minWidth: 320, background: "#18181f", borderLeft: "1px solid rgba(255,255,255,0.07)", display: "flex", flexDirection: "column" }}>
+        <div className="desktop-panel" style={{ width: 368, minWidth: 368, background: "#18181f", borderLeft: "1px solid rgba(255,255,255,0.07)", display: "flex", flexDirection: "column" }}>
 
           <div style={{ padding: "16px 18px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
 
