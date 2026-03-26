@@ -270,8 +270,13 @@ export default function ReviewsHub() {
     const accountsData = await accountsRes.json();
 
     if (!accountsData.accounts?.length) {
-      const errMsg = accountsData.error?.message || accountsData.error?.status || JSON.stringify(accountsData);
-      showToast("Google API : " + errMsg, "error");
+      const isQuota = accountsData.error?.status === "RESOURCE_EXHAUSTED" || accountsData.error?.message?.includes("Quota");
+      if (isQuota) {
+        showToast("Quota Google dépassé — réessai automatique dans 60s…", "info");
+        setTimeout(() => loadGoogleReviews(token), 60000);
+      } else {
+        showToast("Google API : " + (accountsData.error?.message || JSON.stringify(accountsData)), "error");
+      }
       return;
     }
 
