@@ -1121,9 +1121,10 @@ export default function ReviewsHub() {
               ))}
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
-              {([["7d","7 jours"],["30d","30 jours"],["90d","90 jours"],["all","Tout"]] as const).map(([val, label]) => (
-                <div key={val} className={`pill${timeframe === val ? " active" : ""}`} onClick={() => setTimeframe(val)}>{label}</div>
-              ))}
+              <div className={`pill${timeframe === "7d"  ? " active" : ""}`} onClick={() => setTimeframe("7d")}>7 jours</div>
+              <div className={`pill${timeframe === "30d" ? " active" : ""}`} onClick={() => setTimeframe("30d")}>30 jours</div>
+              <div className={`pill${timeframe === "90d" ? " active" : ""}`} onClick={() => setTimeframe("90d")}>90 jours</div>
+              <div className={`pill${timeframe === "all" ? " active" : ""}`} onClick={() => setTimeframe("all")}>Tout</div>
             </div>
 
             <div className="stats-grid-responsive" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
