@@ -926,7 +926,7 @@ export default function ReviewsHub() {
 
             <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 15, fontWeight: 600, flex: 1 }}>ReviewsHub</span>
 
-            <button className="mobile-menu-btn btn btn-ghost" style={{ padding: "4px 8px", fontSize: 16, display: "none" }} onClick={() => setSidebarOpen(false)}>✕</button>
+            <button className="mobile-menu-btn btn btn-ghost" style={{ padding: "4px 8px", fontSize: 16 }} onClick={() => setSidebarOpen(false)}>✕</button>
 
           </div>
 
@@ -992,7 +992,7 @@ export default function ReviewsHub() {
 
           <div className="topbar-responsive" style={{ padding: "14px 24px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#18181f", display: "flex", alignItems: "center", gap: 12 }}>
 
-            <button className="mobile-menu-btn btn btn-ghost" style={{ padding: "6px 10px", fontSize: 18, display: "none" }} onClick={() => setSidebarOpen(true)}>☰</button>
+            <button className="mobile-menu-btn btn btn-ghost" style={{ padding: "6px 10px", fontSize: 18 }} onClick={() => setSidebarOpen(true)}>☰</button>
 
             <div style={{ flex: 1, minWidth: 0 }}>
               <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 15, fontWeight: 500 }}>
