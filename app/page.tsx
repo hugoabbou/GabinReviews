@@ -145,6 +145,8 @@ export default function ReviewsHub() {
 
   const [filter, setFilter]                 = useState<"all" | "pending" | "negative">("all");
 
+  const [starFilter, setStarFilter]         = useState<"all" | 1 | 2 | 3 | 4 | 5>("all");
+
   const [tone, setTone]                     = useState<Tone>("professionnel");
 
   const [aiReply, setAiReply]               = useState("");
@@ -353,6 +355,8 @@ export default function ReviewsHub() {
   const filteredReviews = etabReviews.filter((r) => {
 
     if (platformFilter !== "all" && r.platform !== platformFilter) return false;
+
+    if (starFilter !== "all" && r.rating !== starFilter) return false;
 
     if (filter === "pending")  return !r.answered;
 
@@ -1199,7 +1203,7 @@ export default function ReviewsHub() {
 
                 <div style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>Avis récents</div>
 
-                <div style={{ display: "flex", gap: 6 }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
 
                   {(["all", "pending", "negative"] as const).map((f) => (
 
@@ -1209,6 +1213,17 @@ export default function ReviewsHub() {
 
                     </div>
 
+                  ))}
+
+                  <div style={{ width: 1, background: "rgba(255,255,255,0.1)", margin: "0 2px" }} />
+
+                  <div className={`pill${starFilter === "all" ? " active" : ""}`} onClick={() => setStarFilter("all")} style={{ fontSize: 11 }}>★ Tous</div>
+
+                  {([5, 4, 3, 2, 1] as const).map((s) => (
+                    <div key={s} className={`pill${starFilter === s ? " active" : ""}`} onClick={() => setStarFilter(s)}
+                      style={starFilter === s ? { borderColor: s >= 4 ? "#fbbf24" : s === 3 ? "#f59e0b" : "#ef4444", color: s >= 4 ? "#fbbf24" : s === 3 ? "#f59e0b" : "#ef4444", background: s >= 4 ? "rgba(251,191,36,0.12)" : s === 3 ? "rgba(245,158,11,0.12)" : "rgba(239,68,68,0.12)", fontSize: 11 } : { fontSize: 11 }}>
+                      {"★".repeat(s)}
+                    </div>
                   ))}
 
                 </div>
