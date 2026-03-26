@@ -195,9 +195,9 @@ export default function ReviewsHub() {
 
   const [googleConnected, setGoogleConnected] = useState(false);
 
-  const [gmbAccountId, setGmbAccountId]     = useState(() => localStorage.getItem("gmb_account_id") || "");
+  const [gmbAccountId, setGmbAccountId]     = useState(() => typeof window !== "undefined" ? localStorage.getItem("gmb_account_id") || "" : "");
 
-  const [gmbLocationId, setGmbLocationId]   = useState(() => localStorage.getItem("gmb_location_id") || "");
+  const [gmbLocationId, setGmbLocationId]   = useState(() => typeof window !== "undefined" ? localStorage.getItem("gmb_location_id") || "" : "");
 
 
 
