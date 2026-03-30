@@ -29,5 +29,16 @@ export async function GET(req: Request) {
   }
 
   const response = NextResponse.redirect(`${BASE_URL}/?google_token=${tokenData.access_token}`);
+
+  if (tokenData.refresh_token) {
+    response.cookies.set("google_refresh_token", tokenData.refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 60, // 60 jours
+    });
+  }
+
   return response;
 }

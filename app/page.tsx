@@ -255,6 +255,20 @@ export default function ReviewsHub() {
 
 
 
+ const refreshGoogleToken = async (): Promise<string | null> => {
+    try {
+      const res = await fetch("/api/auth/google/refresh", { method: "POST" });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.access_token) {
+        localStorage.setItem("google_access_token", data.access_token);
+        setGoogleToken(data.access_token);
+        return data.access_token;
+      }
+    } catch {}
+    return null;
+  };
+
  const loadGoogleReviews = async (token: string) => {
 
   try {
@@ -268,6 +282,18 @@ export default function ReviewsHub() {
     });
 
     const accountsData = await accountsRes.json();
+
+    // Si token expiré, tente un refresh silencieux
+    if (accountsData.error?.code === 401 || accountsData.error?.status === "UNAUTHENTICATED") {
+      const newToken = await refreshGoogleToken();
+      if (newToken) {
+        loadGoogleReviews(newToken);
+        return;
+      }
+      setGoogleConnected(false);
+      showToast("Session Google expirée — reconnectez-vous", "error");
+      return;
+    }
 
     if (!accountsData.accounts?.length) {
       const isQuota = accountsData.error?.status === "RESOURCE_EXHAUSTED" || accountsData.error?.message?.includes("Quota");
