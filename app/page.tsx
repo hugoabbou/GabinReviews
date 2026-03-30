@@ -300,7 +300,7 @@ export default function ReviewsHub() {
 
       // On transforme les données Google pour ton interface
 
-      const realEtabs: Establishment[] = locsData.locations.map((loc: any, index: number) => ({
+      const realEtabs: Establishment[] = locsData.locations.filter((loc: any) => loc.title !== "Gambino").map((loc: any, index: number) => ({
 
         id: loc.name.split("/")[1], // On récupère l'ID réel
 
