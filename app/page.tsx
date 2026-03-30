@@ -153,15 +153,9 @@ export default function ReviewsHub() {
 
   const [generating, setGenerating]         = useState(false);
 
-  const [apiKey, setApiKey]                 = useState(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("reviewshub_api_key") || "";
-    return "";
-  });
+  const [apiKey, setApiKey]                 = useState("");
 
-  const [toneExamples, setToneExamples]     = useState(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("reviewshub_tone_examples") || "";
-    return "";
-  });
+  const [toneExamples, setToneExamples]     = useState("");
 
   const [showApiModal, setShowApiModal]     = useState(false);
 
@@ -200,6 +194,14 @@ export default function ReviewsHub() {
   const [gmbLocationId, setGmbLocationId]   = useState(() => typeof window !== "undefined" ? localStorage.getItem("gmb_location_id") || "" : "");
 
 
+
+  useEffect(() => {
+    // Charge la clé API et les exemples depuis le serveur
+    fetch("/api/config").then((r) => r.json()).then((data) => {
+      if (data.apiKey) setApiKey(data.apiKey);
+      if (data.toneExamples) setToneExamples(data.toneExamples);
+    });
+  }, []);
 
   useEffect(() => {
 
@@ -844,15 +846,8 @@ export default function ReviewsHub() {
             <div style={{ display: "flex", gap: 8 }}>
 
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => {
-                if (apiKey.length > 10) {
-                  localStorage.setItem("reviewshub_api_key", apiKey);
-                  localStorage.setItem("reviewshub_tone_examples", toneExamples);
-                  setShowApiModal(false);
-                  showToast("Paramètres enregistrés ✓", "success");
-                } else {
-                  showToast("Clé API invalide", "error");
-                }
-              }}>Enregistrer</button>
+                setShowApiModal(false);
+              }}>Fermer</button>
 
               <button className="btn btn-ghost" onClick={() => setShowApiModal(false)}>Annuler</button>
 
@@ -1019,11 +1014,6 @@ export default function ReviewsHub() {
 
             </button>
 
-            <button className="btn btn-ghost" style={{ width: "100%", fontSize: 12 }} onClick={() => setShowApiModal(true)}>
-
-              🔑 {apiKey ? "Clé API configurée ✓" : "Configurer clé API"}
-
-            </button>
 
             <button className="btn btn-ghost" style={{ width: "100%", fontSize: 12, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)" }}
               onClick={async () => {
@@ -1183,14 +1173,8 @@ export default function ReviewsHub() {
                     <textarea className="input-field" rows={5} placeholder={"Exemple 1 : Merci beaucoup pour votre retour...\n\nExemple 2 : Nous sommes ravis de..."} value={toneExamples} onChange={(e) => setToneExamples(e.target.value)} style={{ resize: "vertical" }} />
                   </div>
                   <button className="btn btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => {
-                    if (apiKey.length > 10) {
-                      localStorage.setItem("reviewshub_api_key", apiKey);
-                  localStorage.setItem("reviewshub_tone_examples", toneExamples);
-                      showToast("Paramètres enregistrés ✓", "success");
-                    } else {
-                      showToast("Clé API invalide", "error");
-                    }
-                  }}>Enregistrer</button>
+                      showToast("Les paramètres sont configurés sur le serveur", "info");
+                  }}>OK</button>
                 </div>
               </div>
             )}
