@@ -242,7 +242,7 @@ export default function ReviewsHub() {
         const cachedLocation = localStorage.getItem("gmb_location_id");
 
         if (cachedAccount && cachedLocation) {
-          loadReviewsOnly(saved, cachedAccount, cachedLocation);
+          loadGoogleReviews(saved);
         } else {
           loadGoogleReviews(saved);
         }
@@ -330,7 +330,32 @@ export default function ReviewsHub() {
       localStorage.setItem("gmb_account_id",  accountId);
       localStorage.setItem("gmb_location_id", realEtabs[0].id);
 
-      await loadReviewsOnly(token, accountId, realEtabs[0].id);
+      // Charge les avis de tous les établissements
+      const allReviews: Review[] = [];
+      for (const etab of realEtabs) {
+        const reviewsRes = await fetch(`/api/reviews/gmb?accountId=${accountId}&locationId=${etab.id}`, {
+          headers: { "x-google-token": token },
+        });
+        const reviewsData = await reviewsRes.json();
+        if (reviewsData.reviews?.length) {
+          const mapped: Review[] = reviewsData.reviews.map((rev: any) => ({
+            id: rev.name,
+            authorName: rev.reviewer?.displayName || "Anonyme",
+            initials: (rev.reviewer?.displayName || "A").substring(0, 2).toUpperCase(),
+            avatarColor: ["#ef4444", "#22c55e", "#4f7cff", "#a855f7", "#06b6d4", "#f97316"][Math.floor(Math.random() * 6)],
+            rating: { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[rev.starRating as string] || 3,
+            comment: rev.reviewText || "",
+            date: rev.createTime ? new Date(rev.createTime).toLocaleDateString("fr-FR") : "Date inconnue",
+            answered: !!rev.reviewReply,
+            reply: rev.reviewReply?.comment || "",
+            establishmentId: etab.id,
+            platform: "google" as Platform,
+            dateTs: rev.createTime ? new Date(rev.createTime).getTime() : undefined,
+          }));
+          allReviews.push(...mapped);
+        }
+      }
+      setReviews(allReviews);
 
     }
 
