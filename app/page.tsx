@@ -153,7 +153,6 @@ export default function ReviewsHub() {
 
   const [generating, setGenerating]         = useState(false);
 
-  const [apiKey, setApiKey]                 = useState("");
 
   const [toneExamples, setToneExamples]     = useState<Record<string, string>>({});
 
@@ -198,7 +197,6 @@ export default function ReviewsHub() {
   useEffect(() => {
     // Charge la clé API et les exemples depuis le serveur
     fetch("/api/config").then((r) => r.json()).then((data) => {
-      if (data.apiKey) setApiKey(data.apiKey);
       setToneExamples({
         gabin: data.toneExamplesGabin || "",
         cotesushi: data.toneExamplesCoteSushi || "",
@@ -468,7 +466,6 @@ export default function ReviewsHub() {
 
   const generateReply = async (review: Review) => {
 
-    if (!apiKey) { setShowApiModal(true); return; }
 
     setSelectedReview(review);
 
@@ -514,41 +511,19 @@ export default function ReviewsHub() {
 
     try {
 
-      const res = await fetch(
-
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-
-        {
-
-          method: "POST",
-
-          headers: { "Content-Type": "application/json" },
-
-          body: JSON.stringify({
-
-            contents: [{ parts: [{ text: prompt }] }],
-
-          }),
-
-        }
-
-      );
-
-
+      const res = await fetch("/api/generate-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
 
       if (!res.ok) {
-
         const err = await res.json();
-
-        throw new Error(err.error?.message || "Erreur API");
-
+        throw new Error(err.error || "Erreur API");
       }
 
-
-
       const data = await res.json();
-
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const text = data.text || "";
 
       setAiReply(text);
 
@@ -830,7 +805,9 @@ export default function ReviewsHub() {
 
             </div>
 
-            <input className="input-field" type="password" placeholder="AIza..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} style={{ marginBottom: 20 }} />
+            <div style={{ fontSize: 12, color: "#7c7b89", padding: "10px 14px", background: "rgba(79,124,255,0.08)", borderRadius: 8, marginBottom: 20 }}>
+              La clé API est configurée sur le serveur.
+            </div>
 
             <div style={{ fontSize: 13, fontWeight: 600, color: "#eeedf4", marginBottom: 6 }}>Exemples de réponses publiées</div>
 
@@ -1163,8 +1140,9 @@ export default function ReviewsHub() {
                 <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, maxWidth: 540, display: "flex", flexDirection: "column", gap: 16 }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "#eeedf4", marginBottom: 6 }}>Clé API Gemini</div>
-                    <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 10, lineHeight: 1.5 }}>Entre ta clé depuis <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: "#4f7cff" }}>aistudio.google.com</a></div>
-                    <input className="input-field" type="password" placeholder="AIza..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+                    <div style={{ fontSize: 12, color: "#7c7b89", padding: "10px 14px", background: "rgba(79,124,255,0.08)", borderRadius: 8 }}>
+                      La clé API est configurée sur le serveur.
+                    </div>
                   </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "#eeedf4", marginBottom: 6 }}>Exemples de réponses publiées</div>
