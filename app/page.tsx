@@ -155,7 +155,7 @@ export default function ReviewsHub() {
 
   const [apiKey, setApiKey]                 = useState("");
 
-  const [toneExamples, setToneExamples]     = useState("");
+  const [toneExamples, setToneExamples]     = useState<Record<string, string>>({});
 
   const [showApiModal, setShowApiModal]     = useState(false);
 
@@ -199,7 +199,10 @@ export default function ReviewsHub() {
     // Charge la clé API et les exemples depuis le serveur
     fetch("/api/config").then((r) => r.json()).then((data) => {
       if (data.apiKey) setApiKey(data.apiKey);
-      if (data.toneExamples) setToneExamples(data.toneExamples);
+      setToneExamples({
+        gabin: data.toneExamplesGabin || "",
+        cotesushi: data.toneExamplesCoteSushi || "",
+      });
     });
   }, []);
 
@@ -497,7 +500,8 @@ export default function ReviewsHub() {
       .map((r) => `Avis: "${r.comment}" → Réponse: "${r.reply}"`)
       .join("\n");
 
-    const exampleText = googleReplies || toneExamples.trim();
+    const etabKey = etab.name.toLowerCase().includes("sushi") ? "cotesushi" : "gabin";
+    const exampleText = googleReplies || (toneExamples[etabKey] || "").trim();
 
     const styleContext = exampleText
       ? `\n\nVoici des exemples de réponses déjà publiées, adopte exactement le même style, ton et vocabulaire :\n${exampleText}`
