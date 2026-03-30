@@ -838,14 +838,9 @@ export default function ReviewsHub() {
               Colle ici 2-3 réponses que tu as déjà publiées sur Google. L'IA imitera ton style et ton vocabulaire.
             </div>
 
-            <textarea
-              className="input-field"
-              rows={5}
-              placeholder={"Exemple 1 : Merci beaucoup pour votre retour...\n\nExemple 2 : Nous sommes ravis de..."}
-              value={toneExamples}
-              onChange={(e) => setToneExamples(e.target.value)}
-              style={{ marginBottom: 16, resize: "vertical" }}
-            />
+            <div style={{ fontSize: 12, color: "#7c7b89", padding: "10px 14px", background: "rgba(79,124,255,0.08)", borderRadius: 8, marginBottom: 16 }}>
+              Les exemples de ton sont configurés par restaurant sur le serveur.
+            </div>
 
             <div style={{ display: "flex", gap: 8 }}>
 
@@ -1174,7 +1169,9 @@ export default function ReviewsHub() {
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "#eeedf4", marginBottom: 6 }}>Exemples de réponses publiées</div>
                     <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 10, lineHeight: 1.5 }}>Colle ici 2-3 réponses que tu as déjà publiées sur Google. L'IA imitera ton style et ton vocabulaire.</div>
-                    <textarea className="input-field" rows={5} placeholder={"Exemple 1 : Merci beaucoup pour votre retour...\n\nExemple 2 : Nous sommes ravis de..."} value={toneExamples} onChange={(e) => setToneExamples(e.target.value)} style={{ resize: "vertical" }} />
+                    <div style={{ fontSize: 12, color: "#7c7b89", padding: "10px 14px", background: "rgba(79,124,255,0.08)", borderRadius: 8 }}>
+                      Les exemples de ton sont configurés par restaurant sur le serveur.
+                    </div>
                   </div>
                   <button className="btn btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => {
                       showToast("Les paramètres sont configurés sur le serveur", "info");
