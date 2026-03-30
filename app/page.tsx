@@ -1283,7 +1283,7 @@ export default function ReviewsHub() {
 
               </div>
 
-              <div>
+              <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 220px)" }}>
 
                 {filteredReviews.length === 0 && (
 
