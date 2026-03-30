@@ -1250,7 +1250,7 @@ export default function ReviewsHub() {
                 </div>
               ))}
             </div>
-            <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden" }}>
+            <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
 
               <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
 
@@ -1283,7 +1283,7 @@ export default function ReviewsHub() {
 
               </div>
 
-              <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 220px)" }}>
+              <div>
 
                 {filteredReviews.length === 0 && (
 
