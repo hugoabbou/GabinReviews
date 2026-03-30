@@ -858,7 +858,7 @@ export default function ReviewsHub() {
 
               <Stars rating={selectedReview.rating} size={14} />
 
-              <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(238,237,244,0.85)", marginTop: 6 }}>&ldquo;{selectedReview.comment}&rdquo;</div>
+              {selectedReview.comment && <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(238,237,244,0.85)", marginTop: 6 }}>&ldquo;{selectedReview.comment}&rdquo;</div>}
 
               <div style={{ fontSize: 12, color: "#7c7b89", marginTop: 8 }}>— {selectedReview.authorName}</div>
 
@@ -1075,7 +1075,7 @@ export default function ReviewsHub() {
 
                       </div>
 
-                      <div style={{ fontSize: 12, color: "#7c7b89", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.comment}</div>
+                      {r.comment && <div style={{ fontSize: 12, color: "#7c7b89", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.comment}</div>}
 
                     </div>
 
@@ -1135,7 +1135,7 @@ export default function ReviewsHub() {
                         </div>
                         <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 10, fontWeight: 500, background: "rgba(239,68,68,0.12)", color: "#ef4444" }}>Urgent</span>
                       </div>
-                      <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "rgba(238,237,244,0.75)" }}>&ldquo;{r.comment}&rdquo;</div>
+                      {r.comment && <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "rgba(238,237,244,0.75)" }}>&ldquo;{r.comment}&rdquo;</div>}
                     </div>
                   ));
                 })()}
@@ -1329,11 +1329,11 @@ export default function ReviewsHub() {
 
                     </div>
 
-                    <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "rgba(238,237,244,0.75)", marginBottom: 12 }}>
+                    {review.comment && <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "rgba(238,237,244,0.75)", marginBottom: 12 }}>
 
                       &ldquo;{review.comment}&rdquo;
 
-                    </div>
+                    </div>}
 
                     <button className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }}
 
@@ -1395,7 +1395,7 @@ export default function ReviewsHub() {
 
                   <Stars rating={selectedReview.rating} size={14} />
 
-                  <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(238,237,244,0.85)", marginTop: 6 }}>&ldquo;{selectedReview.comment}&rdquo;</div>
+                  {selectedReview.comment && <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(238,237,244,0.85)", marginTop: 6 }}>&ldquo;{selectedReview.comment}&rdquo;</div>}
 
                   <div style={{ fontSize: 12, color: "#7c7b89", marginTop: 8 }}>— {selectedReview.authorName}</div>
 
