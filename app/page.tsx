@@ -252,15 +252,29 @@ export default function ReviewsHub() {
 
     } else {
 
-      // Tente un refresh automatique (fonctionne pour tous les navigateurs)
-      const res = await fetch("/api/auth/google/refresh", { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.access_token) {
-          localStorage.setItem("google_access_token", data.access_token);
-          setGoogleToken(data.access_token);
+      // Tente un refresh automatique via le serveur
+      let loaded = false;
+      try {
+        const res = await fetch("/api/auth/google/refresh", { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.access_token) {
+            localStorage.setItem("google_access_token", data.access_token);
+            setGoogleToken(data.access_token);
+            setGoogleConnected(true);
+            loadGoogleReviews(data.access_token);
+            loaded = true;
+          }
+        }
+      } catch {}
+
+      // Fallback : token en localStorage
+      if (!loaded) {
+        const saved = localStorage.getItem("google_access_token");
+        if (saved) {
+          setGoogleToken(saved);
           setGoogleConnected(true);
-          loadGoogleReviews(data.access_token);
+          loadGoogleReviews(saved);
         }
       }
 
