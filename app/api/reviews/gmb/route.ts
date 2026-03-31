@@ -28,7 +28,7 @@ export async function GET(req: Request) {
   }
 
   const res = await fetch(
-    `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/reviews?pageSize=50`,
+    `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/reviews?pageSize=50&languageCode=fr`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   return NextResponse.json(await res.json());
