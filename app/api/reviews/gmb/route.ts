@@ -31,7 +31,10 @@ export async function GET(req: Request) {
     `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/reviews?pageSize=50`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
-  return NextResponse.json(await res.json());
+  const data = await res.json();
+  // Log first review to inspect field names
+  if (data.reviews?.length) console.log("REVIEW SAMPLE:", JSON.stringify(data.reviews[0]));
+  return NextResponse.json(data);
 }
 
 export async function POST(req: Request) {
