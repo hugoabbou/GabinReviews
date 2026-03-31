@@ -108,6 +108,11 @@ const PLATFORM_META: Record<Platform, { label: string; color: string; bg: string
   deliveroo: { label: "Deliveroo", color: "#00ccbc", bg: "rgba(0,204,188,0.12)",   icon: "D" },
 };
 
+function extractOriginalComment(text: string): string {
+  const match = text.match(/\(Original\)\s*([\s\S]+)/);
+  return match ? match[1].trim() : text;
+}
+
 function PlatformBadge({ platform }: { platform: Platform }) {
   const m = PLATFORM_META[platform];
   return (
@@ -137,7 +142,7 @@ export default function ReviewsHub() {
 
   const [establishments, setEstablishments] = useState<Establishment[]>(ESTABLISHMENTS);
 
-  const [selectedEtab, setSelectedEtab]     = useState("1");
+  const [selectedEtab, setSelectedEtab]     = useState<"all" | string>("all");
 
   const [reviews, setReviews]               = useState<Review[]>(MOCK_REVIEWS);
 
@@ -381,7 +386,7 @@ export default function ReviewsHub() {
             initials: (rev.reviewer?.displayName || "A").substring(0, 2).toUpperCase(),
             avatarColor: ["#ef4444", "#22c55e", "#4f7cff", "#a855f7", "#06b6d4", "#f97316"][Math.floor(Math.random() * 6)],
             rating: { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[rev.starRating as string] || 3,
-            comment: (rev.comment || "").trim(),
+            comment: extractOriginalComment((rev.comment || "").trim()),
             date: rev.createTime ? new Date(rev.createTime).toLocaleDateString("fr-FR") : "Date inconnue",
             answered: !!rev.reviewReply,
             reply: rev.reviewReply?.comment || "",
@@ -440,7 +445,7 @@ export default function ReviewsHub() {
 
  const etab = establishments.find((e) => e.id === selectedEtab) || establishments[0];
 
-  const etabReviews = reviews.filter((r) => r.establishmentId === selectedEtab);
+  const etabReviews = selectedEtab === "all" ? reviews : reviews.filter((r) => r.establishmentId === selectedEtab);
 
   const filteredReviews = etabReviews.filter((r) => {
 
@@ -1229,6 +1234,7 @@ export default function ReviewsHub() {
 
             {activeNav === "reviews" && <>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+              <div className={`pill${selectedEtab === "all" ? " active" : ""}`} onClick={() => { setSelectedEtab("all"); setSelectedReview(null); setAiReply(""); }}>Tout</div>
               {establishments.map((e: Establishment) => (
                 <div key={e.id} className={`pill${selectedEtab === e.id ? " active" : ""}`} onClick={() => { setSelectedEtab(e.id); setSelectedReview(null); setAiReply(""); }}>
                   <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: e.color, marginRight: 5 }} />
@@ -1311,6 +1317,8 @@ export default function ReviewsHub() {
                           <Stars rating={review.rating} size={12} />
 
                           <PlatformBadge platform={review.platform} />
+
+                          {selectedEtab === "all" && (() => { const etabName = establishments.find((e) => e.id === review.establishmentId); return etabName ? <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 8, fontWeight: 600, background: etabName.color + "22", color: etabName.color }}>{etabName.name}</span> : null; })()}
 
                         </div>
 
