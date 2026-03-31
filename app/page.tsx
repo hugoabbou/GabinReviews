@@ -694,6 +694,8 @@ export default function ReviewsHub() {
 
 
 
+    const reviewEtab = establishments.find((e) => e.id === review.establishmentId) || etab;
+
     const toneMap: Record<Tone, string> = {
 
       professionnel: "Réponds de manière professionnelle et courtoise.",
@@ -702,7 +704,9 @@ export default function ReviewsHub() {
 
       concis:        "Réponds de manière courte et directe, 2-3 phrases maximum.",
 
-      friendly:      "Réponds de manière décontractée, chaleureuse et amicale, mais en vouvoyant toujours le client (utilise 'vous' et non 'tu').",
+      friendly:      reviewEtab.name.toLowerCase().includes("sushi")
+        ? `Réponds de manière décontractée, chaleureuse et amicale, mais en vouvoyant toujours le client (utilise 'vous' et non 'tu'). Utilise 'on a' plutôt que 'nous avons'. Signe avec 'La Team Nikkei'.`
+        : `Réponds de manière décontractée, chaleureuse et amicale, mais en vouvoyant toujours le client (utilise 'vous' et non 'tu'). Utilise 'on a' plutôt que 'nous avons'. Glisse naturellement une ou deux expressions italiennes (ex: 'grazie mille', 'a presto', 'benvenuto', 'bellissimo'). Signe avec 'La Squadra Gabin'.`,
 
     };
 
@@ -713,8 +717,6 @@ export default function ReviewsHub() {
       .slice(0, 3)
       .map((r) => `Avis: "${r.comment}" → Réponse: "${r.reply}"`)
       .join("\n");
-
-    const reviewEtab = establishments.find((e) => e.id === review.establishmentId) || etab;
     const etabKey = reviewEtab.name.toLowerCase().includes("sushi") ? "cotesushi" : "gabin";
     const exampleText = googleReplies || (toneExamples[etabKey] || "").trim();
 
