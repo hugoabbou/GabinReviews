@@ -221,6 +221,7 @@ export default function ReviewsHub() {
   }, []);
 
   useEffect(() => {
+    (async () => {
 
     // Récupère le token Google depuis l'URL après OAuth
 
@@ -246,30 +247,21 @@ export default function ReviewsHub() {
 
     } else {
 
-      // Vérifie si un token existe déjà
-
-      const saved = localStorage.getItem("google_access_token");
-
-      if (saved) {
-
-        setGoogleToken(saved);
-
-        setGoogleConnected(true);
-
-        // Si les IDs sont déjà en cache, charge directement les avis sans rappeler Account Management API
-        const cachedAccount  = localStorage.getItem("gmb_account_id");
-        const cachedLocation = localStorage.getItem("gmb_location_id");
-
-        if (cachedAccount && cachedLocation) {
-          loadGoogleReviews(saved);
-        } else {
-          loadGoogleReviews(saved);
+      // Tente un refresh automatique (fonctionne pour tous les navigateurs)
+      const res = await fetch("/api/auth/google/refresh", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          localStorage.setItem("google_access_token", data.access_token);
+          setGoogleToken(data.access_token);
+          setGoogleConnected(true);
+          loadGoogleReviews(data.access_token);
         }
-
       }
 
     }
 
+    })();
   }, []);
 
 

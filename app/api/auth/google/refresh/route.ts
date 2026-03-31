@@ -1,7 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { getStore } from "@netlify/blobs";
 
-export async function POST(req: NextRequest) {
-  const refreshToken = req.cookies.get("google_refresh_token")?.value;
+export async function POST() {
+  let refreshToken: string | null = null;
+
+  try {
+    const store = getStore("google-tokens");
+    refreshToken = await store.get("refresh_token", { type: "text" });
+  } catch {}
 
   if (!refreshToken) {
     return NextResponse.json({ error: "No refresh token" }, { status: 401 });
