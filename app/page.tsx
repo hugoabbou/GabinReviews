@@ -195,13 +195,29 @@ export default function ReviewsHub() {
 
 
   useEffect(() => {
-    // Charge la clé API et les exemples depuis le serveur
+    // Charge les exemples depuis le serveur
     fetch("/api/config").then((r) => r.json()).then((data) => {
       setToneExamples({
         gabin: data.toneExamplesGabin || "",
         cotesushi: data.toneExamplesCoteSushi || "",
       });
     });
+
+    // Rafraîchit le token Google toutes les 55 minutes proactivement
+    const refreshInterval = setInterval(async () => {
+      const saved = localStorage.getItem("google_access_token");
+      if (!saved) return;
+      const res = await fetch("/api/auth/google/refresh", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          localStorage.setItem("google_access_token", data.access_token);
+          setGoogleToken(data.access_token);
+        }
+      }
+    }, 55 * 60 * 1000);
+
+    return () => clearInterval(refreshInterval);
   }, []);
 
   useEffect(() => {
@@ -735,7 +751,7 @@ export default function ReviewsHub() {
 
         .sidebar-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:40; }
 
-        .sidebar { width:230px;min-width:230px;background:#18181f;border-right:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:50; }
+        .sidebar { width:230px;min-width:230px;background:#18181f;border-right:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;overflow:hidden;position:sticky;top:0;height:100vh;z-index:50; }
 
         .mobile-panel { display:none; }
 
@@ -928,7 +944,7 @@ export default function ReviewsHub() {
 
 
 
-      <div style={{ display: "flex", height: "100vh", background: "#0f0f12", color: "#eeedf4", overflow: "hidden" }}>
+      <div style={{ display: "flex", minHeight: "100vh", background: "#0f0f12", color: "#eeedf4" }}>
 
 
 
@@ -1083,7 +1099,7 @@ export default function ReviewsHub() {
 
 
 
-          <div className="content-responsive" style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="content-responsive" style={{ flex: 1, padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
 
             {activeNav === "alerts" && (
               <div>
@@ -1346,7 +1362,7 @@ export default function ReviewsHub() {
 
 
 
-        <div className="desktop-panel" style={{ width: 368, minWidth: 368, background: "#18181f", borderLeft: "1px solid rgba(255,255,255,0.07)", display: "flex", flexDirection: "column" }}>
+        <div className="desktop-panel" style={{ width: 368, minWidth: 368, background: "#18181f", borderLeft: "1px solid rgba(255,255,255,0.07)", display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
 
           <div style={{ padding: "16px 18px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
 
