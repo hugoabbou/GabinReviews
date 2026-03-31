@@ -425,7 +425,7 @@ export default function ReviewsHub() {
           initials: (rev.reviewer?.displayName || "A").substring(0, 2).toUpperCase(),
           avatarColor: ["#ef4444", "#22c55e", "#4f7cff", "#a855f7", "#06b6d4", "#f97316"][Math.floor(Math.random() * 6)],
           rating: { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[rev.starRating as string] || 3,
-          comment: rev.reviewText || "",
+          comment: (rev.reviewText || "").trim(),
           date: rev.createTime ? new Date(rev.createTime).toLocaleDateString("fr-FR") : "Date inconnue",
           answered: !!rev.reviewReply,
           reply: rev.reviewReply?.comment || "",
@@ -681,9 +681,7 @@ export default function ReviewsHub() {
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        body { overflow: hidden; background: #0f0f12; }
-
-        @media (max-width: 768px) { body { overflow: auto; } }
+        body { overflow: auto; background: #0f0f12; }
 
         ::-webkit-scrollbar { width: 4px; }
 
