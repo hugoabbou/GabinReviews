@@ -389,7 +389,7 @@ export default function ReviewsHub() {
             initials: (rev.reviewer?.displayName || "A").substring(0, 2).toUpperCase(),
             avatarColor: ["#ef4444", "#22c55e", "#4f7cff", "#a855f7", "#06b6d4", "#f97316"][Math.floor(Math.random() * 6)],
             rating: { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[rev.starRating as string] || 3,
-            comment: rev.reviewText || "",
+            comment: (rev.reviewText || "").trim(),
             date: rev.createTime ? new Date(rev.createTime).toLocaleDateString("fr-FR") : "Date inconnue",
             answered: !!rev.reviewReply,
             reply: rev.reviewReply?.comment || "",
@@ -1021,7 +1021,7 @@ export default function ReviewsHub() {
 
 
 
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
 
           <div className="topbar-responsive" style={{ padding: "14px 24px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#18181f", display: "flex", alignItems: "center", gap: 12 }}>
 
