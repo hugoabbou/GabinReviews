@@ -58,47 +58,6 @@ type Tone = "professionnel" | "empathique" | "concis";
 
 
 
-const ESTABLISHMENTS: Establishment[] = [
-
-  { id: "1", name: "Paris 8ème",     color: "#4f7cff", avgRating: 4.6, total: 248, pending: 2 },
-
-  { id: "2", name: "Lyon Centre",    color: "#22c55e", avgRating: 4.8, total: 182, pending: 1 },
-
-  { id: "3", name: "Bordeaux",       color: "#f59e0b", avgRating: 4.3, total: 134, pending: 0 },
-
-  { id: "4", name: "Nice Promenade", color: "#ec4899", avgRating: 4.7, total: 97,  pending: 0 },
-
-];
-
-
-
-const MOCK_REVIEWS: Review[] = [
-
-  { id: "r1", authorName: "Marc Alain",     initials: "MA", avatarColor: "#ef4444", rating: 1, answered: false, establishmentId: "1", date: "Il y a 4 min",  platform: "google",    dateTs: Date.now() - 4*60*1000,         comment: "Service absolument déplorable. J'ai attendu 45 minutes pour être servi et personne ne s'est excusé. La qualité ne correspond pas au prix pratiqué. Je ne reviendrai jamais." },
-
-  { id: "r2", authorName: "Sophie Bernard", initials: "SB", avatarColor: "#22c55e", rating: 5, answered: false, establishmentId: "1", date: "Hier",           platform: "google",    dateTs: Date.now() - 1*86400000,        comment: "Expérience parfaite de bout en bout. L'équipe est aux petits soins, l'ambiance est chaleureuse. Je recommande vivement !" },
-
-  { id: "r3", authorName: "Thomas Dupont",  initials: "TD", avatarColor: "#4f7cff", rating: 4, answered: true,  establishmentId: "1", date: "Il y a 2 jours", platform: "ubereats",  dateTs: Date.now() - 2*86400000,        comment: "Très bon dans l'ensemble. Quelques détails à améliorer sur les temps d'attente mais l'accueil est excellent." },
-
-  { id: "r4", authorName: "Julie Martin",   initials: "JM", avatarColor: "#a855f7", rating: 3, answered: false, establishmentId: "2", date: "Il y a 3 jours", platform: "deliveroo", dateTs: Date.now() - 3*86400000,        comment: "Correct sans plus. Le personnel est sympa mais l'attente était un peu longue pour un mercredi midi." },
-
-  { id: "r5", authorName: "Pierre Leclerc", initials: "PL", avatarColor: "#06b6d4", rating: 5, answered: true,  establishmentId: "2", date: "Il y a 4 jours", platform: "google",    dateTs: Date.now() - 4*86400000,        comment: "Excellent comme toujours ! La meilleure adresse de Lyon sans hésitation." },
-
-  { id: "r6", authorName: "Camille Roux",   initials: "CR", avatarColor: "#f97316", rating: 2, answered: false, establishmentId: "3", date: "Il y a 5 jours", platform: "ubereats",  dateTs: Date.now() - 5*86400000,        comment: "Déçue par cette visite. L'accueil était froid et les produits n'étaient pas frais." },
-
-  { id: "r7", authorName: "Antoine Morel",  initials: "AM", avatarColor: "#8b5cf6", rating: 4, answered: false, establishmentId: "1", date: "Il y a 6 jours", platform: "deliveroo", dateTs: Date.now() - 6*86400000,        comment: "Livraison rapide et plats bien emballés. La qualité était au rendez-vous, je recommande !" },
-
-  { id: "r8", authorName: "Lucie Fontaine", initials: "LF", avatarColor: "#ec4899", rating: 2, answered: false, establishmentId: "2", date: "Il y a 1 sem.",  platform: "ubereats",  dateTs: Date.now() - 8*86400000,        comment: "Commande incomplète, un article manquait. Le service client n'a pas répondu rapidement." },
-
-  { id: "r9", authorName: "Hugo Garnier",   initials: "HG", avatarColor: "#14b8a6", rating: 5, answered: false, establishmentId: "3", date: "Il y a 1 sem.",  platform: "deliveroo", dateTs: Date.now() - 8*86400000,        comment: "Parfait comme d'habitude. Les portions sont généreuses et tout était chaud à la livraison." },
-
-  { id: "r10", authorName: "Clara Petit",   initials: "CP", avatarColor: "#f59e0b", rating: 1, answered: false, establishmentId: "1", date: "Il y a 35 jours", platform: "google",   dateTs: Date.now() - 35*86400000,       comment: "Très mauvaise expérience. Le personnel était irrespectueux et la nourriture froide." },
-
-  { id: "r11", authorName: "Romain Blanc",  initials: "RB", avatarColor: "#6366f1", rating: 5, answered: true,  establishmentId: "2", date: "Il y a 50 jours", platform: "ubereats", dateTs: Date.now() - 50*86400000,       comment: "Toujours aussi bon ! La livraison est rapide et les plats sont délicieux." },
-
-  { id: "r12", authorName: "Nadia Okafor",  initials: "NO", avatarColor: "#10b981", rating: 3, answered: false, establishmentId: "3", date: "Il y a 95 jours", platform: "deliveroo",dateTs: Date.now() - 95*86400000,       comment: "Correct sans plus. Rien d'exceptionnel mais rien à redire non plus." },
-
-];
 
 
 
@@ -140,11 +99,11 @@ function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
 
 export default function ReviewsHub() {
 
-  const [establishments, setEstablishments] = useState<Establishment[]>(ESTABLISHMENTS);
+  const [establishments, setEstablishments] = useState<Establishment[]>([]);
 
   const [selectedEtab, setSelectedEtab]     = useState<"all" | string>("all");
 
-  const [reviews, setReviews]               = useState<Review[]>(MOCK_REVIEWS);
+  const [reviews, setReviews]               = useState<Review[]>([]);
 
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
@@ -331,7 +290,7 @@ export default function ReviewsHub() {
         showToast("Quota Google dépassé — réessai automatique dans 60s…", "info");
         setTimeout(() => loadGoogleReviews(token), 60000);
       } else {
-        showToast("Google API : " + (accountsData.error?.message || JSON.stringify(accountsData)), "error");
+        showToast("Erreur comptes : " + JSON.stringify(accountsData).substring(0, 200), "error");
       }
       return;
     }
@@ -391,6 +350,10 @@ export default function ReviewsHub() {
           headers: { "x-google-token": token },
         });
         const reviewsData = await reviewsRes.json();
+        if (reviewsData.error) {
+          showToast("Erreur avis " + etab.name + " : " + (reviewsData.error?.message || JSON.stringify(reviewsData.error)), "error");
+          continue;
+        }
         if (reviewsData.reviews?.length) {
           const mapped: Review[] = reviewsData.reviews.map((rev: any) => ({
             id: rev.name,
