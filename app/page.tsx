@@ -148,6 +148,8 @@ export default function ReviewsHub() {
 
   const [timeframe, setTimeframe]           = useState<"7d" | "30d" | "90d" | "all">("all");
 
+  const [sortOrder, setSortOrder]           = useState<"newest" | "oldest">("newest");
+
   const [googleToken, setGoogleToken]       = useState("");
 
   const [googleConnected, setGoogleConnected] = useState(false);
@@ -421,19 +423,19 @@ export default function ReviewsHub() {
 
   const etabReviews = selectedEtab === "all" ? reviews : reviews.filter((r) => r.establishmentId === selectedEtab);
 
-  const filteredReviews = etabReviews.filter((r) => {
-
-    if (platformFilter !== "all" && r.platform !== platformFilter) return false;
-
-    if (starFilter !== "all" && r.rating !== starFilter) return false;
-
-    if (filter === "pending")  return !r.answered;
-
-    if (filter === "negative") return r.rating <= 2;
-
-    return true;
-
-  });
+  const filteredReviews = etabReviews
+    .filter((r) => {
+      if (platformFilter !== "all" && r.platform !== platformFilter) return false;
+      if (starFilter !== "all" && r.rating !== starFilter) return false;
+      if (filter === "pending")  return !r.answered;
+      if (filter === "negative") return r.rating <= 2;
+      return true;
+    })
+    .sort((a, b) => {
+      const aTs = a.dateTs ?? 0;
+      const bTs = b.dateTs ?? 0;
+      return sortOrder === "newest" ? bTs - aTs : aTs - bTs;
+    });
 
   const pendingCount = reviews.filter((r) => !r.answered).length;
 
@@ -1237,6 +1239,14 @@ export default function ReviewsHub() {
               <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
 
                 <div style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>Avis récents</div>
+
+                <div
+                  className="pill"
+                  onClick={() => setSortOrder((s) => s === "newest" ? "oldest" : "newest")}
+                  style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}
+                >
+                  {sortOrder === "newest" ? "↓ Plus récents" : "↑ Plus anciens"}
+                </div>
 
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
 
