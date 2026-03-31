@@ -1105,25 +1105,38 @@ export default function ReviewsHub() {
                     if (alertsPlatform !== "all" && r.platform !== alertsPlatform) return false;
                     return true;
                   });
-                  return alertsFiltered.length === 0 ? (
-                    <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 32, textAlign: "center", color: "#5a5968", fontSize: 14 }}>Aucun avis négatif en attente</div>
-                  ) : alertsFiltered.map((r) => (
-                    <div key={r.id} className="review-item" style={{ marginBottom: 8 }} onClick={() => { setSelectedReview(r); setAiReply(""); setPublished(false); setActiveNav("reviews"); }}>
-                      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: r.avatarColor + "22", color: r.avatarColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{r.initials}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>{r.authorName}</div>
-                          <div style={{ fontSize: 12, color: "#7c7b89", display: "flex", gap: 8, alignItems: "center" }}>
-                            <span>{r.date}</span>
-                            <span style={{ color: "#ef4444" }}>{"★".repeat(r.rating)}</span>
-                            <PlatformBadge platform={r.platform} />
-                          </div>
-                        </div>
-                        <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 10, fontWeight: 500, background: "rgba(239,68,68,0.12)", color: "#ef4444" }}>Urgent</span>
+                  return (
+                    <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
+                      <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center" }}>
+                        <div style={{ fontSize: 14, fontWeight: 500 }}>Avis négatifs urgents</div>
                       </div>
-                      {r.comment && <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "rgba(238,237,244,0.75)" }}>&ldquo;{r.comment}&rdquo;</div>}
+                      {alertsFiltered.length === 0 ? (
+                        <div style={{ padding: 32, textAlign: "center", color: "#5a5968", fontSize: 14 }}>Aucun avis négatif en attente</div>
+                      ) : alertsFiltered.map((r) => (
+                        <div key={r.id} className={`review-item${selectedReview?.id === r.id ? " selected" : ""}`}
+                          onClick={() => { setSelectedReview(r); setAiReply(""); setPublished(false); setShowPanel(true); }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
+                            <div style={{ width: 36, height: 36, borderRadius: "50%", background: r.avatarColor + "22", color: r.avatarColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{r.initials}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>{r.authorName}</div>
+                              <div style={{ fontSize: 12, color: "#7c7b89", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span>{r.date}</span>
+                                <Stars rating={r.rating} size={12} />
+                                <PlatformBadge platform={r.platform} />
+                                {alertsEtab === "all" && (() => { const etabName = establishments.find((e) => e.id === r.establishmentId); return etabName ? <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 8, fontWeight: 600, background: etabName.color + "22", color: etabName.color }}>{etabName.name}</span> : null; })()}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 10, fontWeight: 500, flexShrink: 0, background: "rgba(239,68,68,0.12)", color: "#ef4444" }}>Urgent</span>
+                          </div>
+                          {r.comment && <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "rgba(238,237,244,0.75)", marginBottom: 12 }}>&ldquo;{r.comment}&rdquo;</div>}
+                          <button className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }}
+                            onClick={(e) => { e.stopPropagation(); generateReply(r); }}>
+                            ✨ Générer réponse IA
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ));
+                  );
                 })()}
               </div>
             )}
