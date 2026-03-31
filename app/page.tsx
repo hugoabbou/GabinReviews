@@ -389,7 +389,7 @@ export default function ReviewsHub() {
             initials: (rev.reviewer?.displayName || "A").substring(0, 2).toUpperCase(),
             avatarColor: ["#ef4444", "#22c55e", "#4f7cff", "#a855f7", "#06b6d4", "#f97316"][Math.floor(Math.random() * 6)],
             rating: { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[rev.starRating as string] || 3,
-            comment: (rev.reviewText || "").trim(),
+            comment: (rev.comment || "").trim(),
             date: rev.createTime ? new Date(rev.createTime).toLocaleDateString("fr-FR") : "Date inconnue",
             answered: !!rev.reviewReply,
             reply: rev.reviewReply?.comment || "",
