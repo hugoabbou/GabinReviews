@@ -485,7 +485,8 @@ export default function ReviewsHub() {
       .map((r) => `Avis: "${r.comment}" → Réponse: "${r.reply}"`)
       .join("\n");
 
-    const etabKey = etab.name.toLowerCase().includes("sushi") ? "cotesushi" : "gabin";
+    const reviewEtab = establishments.find((e) => e.id === review.establishmentId) || etab;
+    const etabKey = reviewEtab.name.toLowerCase().includes("sushi") ? "cotesushi" : "gabin";
     const exampleText = googleReplies || (toneExamples[etabKey] || "").trim();
 
     const styleContext = exampleText
@@ -493,7 +494,7 @@ export default function ReviewsHub() {
       : "";
 
     const platformLabel = PLATFORM_META[review.platform].label;
-    const prompt = `Tu gères les avis ${platformLabel} de "${etab.name}". Client: ${review.authorName}, note: ${review.rating}/5. Avis: "${review.comment}". ${toneMap[tone]} Réponds en français, 80 mots max. Uniquement le texte de la réponse.${styleContext}`;
+    const prompt = `Tu gères les avis ${platformLabel} de "${reviewEtab.name}". Client: ${review.authorName}, note: ${review.rating}/5. Avis: "${review.comment}". ${toneMap[tone]} Réponds en français, 80 mots max. Uniquement le texte de la réponse.${styleContext}`;
 
 
 
