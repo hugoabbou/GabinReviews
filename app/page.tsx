@@ -1234,7 +1234,7 @@ export default function ReviewsHub() {
 
             {activeNav === "reviews" && <>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-              <div className={`pill${selectedEtab === "all" ? " active" : ""}`} onClick={() => { setSelectedEtab("all"); setSelectedReview(null); setAiReply(""); }}>Tout</div>
+              <div className={`pill${selectedEtab === "all" ? " active" : ""}`} onClick={() => { setSelectedEtab("all"); setSelectedReview(null); setAiReply(""); }}>Tous</div>
               {establishments.map((e: Establishment) => (
                 <div key={e.id} className={`pill${selectedEtab === e.id ? " active" : ""}`} onClick={() => { setSelectedEtab(e.id); setSelectedReview(null); setAiReply(""); }}>
                   <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: e.color, marginRight: 5 }} />
