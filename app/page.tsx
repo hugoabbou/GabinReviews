@@ -846,6 +846,13 @@ export default function ReviewsHub() {
 
             </div>
 
+            {selectedReview.answered && selectedReview.reply && (
+              <div style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: 14 }}>
+                <div style={{ fontSize: 11, color: "#22c55e", fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>✓ Réponse publiée</div>
+                <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(238,237,244,0.75)" }}>{selectedReview.reply}</div>
+              </div>
+            )}
+
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
 
               {(["professionnel", "empathique", "concis"] as Tone[]).map((t) => (
@@ -1378,7 +1385,12 @@ export default function ReviewsHub() {
 
                 </div>
 
-
+                {selectedReview.answered && selectedReview.reply && (
+                  <div style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: 14 }}>
+                    <div style={{ fontSize: 11, color: "#22c55e", fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>✓ Réponse publiée</div>
+                    <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(238,237,244,0.75)" }}>{selectedReview.reply}</div>
+                  </div>
+                )}
 
                 <div>
 
