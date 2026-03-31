@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 
 
@@ -54,7 +54,7 @@ type Establishment = {
 
 
 
-type Tone = "professionnel" | "empathique" | "concis";
+type Tone = "professionnel" | "empathique" | "concis" | "friendly";
 
 
 
@@ -153,6 +153,16 @@ export default function ReviewsHub() {
 
   const [googleConnected, setGoogleConnected] = useState(false);
 
+  const [uberEatsToken, setUberEatsToken]       = useState("");
+
+  const [uberEatsConnected, setUberEatsConnected] = useState(false);
+
+  const [deliverooToken, setDeliverooToken]       = useState("");
+
+  const [deliverooConnected, setDeliverooConnected] = useState(false);
+
+  const establishmentsRef = useRef<Establishment[]>([]);
+
   const [gmbAccountId, setGmbAccountId]     = useState(() => typeof window !== "undefined" ? localStorage.getItem("gmb_account_id") || "" : "");
 
   const [gmbLocationId, setGmbLocationId]   = useState(() => typeof window !== "undefined" ? localStorage.getItem("gmb_location_id") || "" : "");
@@ -182,7 +192,35 @@ export default function ReviewsHub() {
       }
     }, 55 * 60 * 1000);
 
-    return () => clearInterval(refreshInterval);
+    // Rafraîchit le token Uber Eats toutes les 55 minutes
+    const uberRefreshInterval = setInterval(async () => {
+      const saved = localStorage.getItem("ubereats_access_token");
+      if (!saved) return;
+      const res = await fetch("/api/auth/ubereats/refresh", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          localStorage.setItem("ubereats_access_token", data.access_token);
+          setUberEatsToken(data.access_token);
+        }
+      }
+    }, 55 * 60 * 1000);
+
+    // Rafraîchit le token Deliveroo toutes les 55 minutes
+    const deliverooRefreshInterval = setInterval(async () => {
+      const saved = localStorage.getItem("deliveroo_access_token");
+      if (!saved) return;
+      const res = await fetch("/api/auth/deliveroo/refresh", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          localStorage.setItem("deliveroo_access_token", data.access_token);
+          setDeliverooToken(data.access_token);
+        }
+      }
+    }, 55 * 60 * 1000);
+
+    return () => { clearInterval(refreshInterval); clearInterval(uberRefreshInterval); clearInterval(deliverooRefreshInterval); };
   }, []);
 
   useEffect(() => {
@@ -191,6 +229,75 @@ export default function ReviewsHub() {
     // Récupère le token Google depuis l'URL après OAuth
 
     const params = new URLSearchParams(window.location.search);
+
+    // Uber Eats token from OAuth callback
+    const uberToken = params.get("ubereats_token");
+    if (uberToken) {
+      localStorage.setItem("ubereats_access_token", uberToken);
+      setUberEatsToken(uberToken);
+      setUberEatsConnected(true);
+      window.history.replaceState({}, "", "/");
+      showToast("Uber Eats connecté ✓", "success");
+      loadUberEatsReviews(uberToken);
+    } else {
+      // Try server-side refresh first
+      let loaded = false;
+      try {
+        const res = await fetch("/api/auth/ubereats/refresh", { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.access_token) {
+            localStorage.setItem("ubereats_access_token", data.access_token);
+            setUberEatsToken(data.access_token);
+            setUberEatsConnected(true);
+            loadUberEatsReviews(data.access_token);
+            loaded = true;
+          }
+        }
+      } catch {}
+      if (!loaded) {
+        const savedUber = localStorage.getItem("ubereats_access_token");
+        if (savedUber) {
+          setUberEatsToken(savedUber);
+          setUberEatsConnected(true);
+          loadUberEatsReviews(savedUber);
+        }
+      }
+    }
+
+    // Deliveroo token from OAuth callback
+    const deliverooTokenParam = params.get("deliveroo_token");
+    if (deliverooTokenParam) {
+      localStorage.setItem("deliveroo_access_token", deliverooTokenParam);
+      setDeliverooToken(deliverooTokenParam);
+      setDeliverooConnected(true);
+      window.history.replaceState({}, "", "/");
+      showToast("Deliveroo connecté ✓", "success");
+      loadDeliverooReviews(deliverooTokenParam);
+    } else {
+      let loaded = false;
+      try {
+        const res = await fetch("/api/auth/deliveroo/refresh", { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.access_token) {
+            localStorage.setItem("deliveroo_access_token", data.access_token);
+            setDeliverooToken(data.access_token);
+            setDeliverooConnected(true);
+            loadDeliverooReviews(data.access_token);
+            loaded = true;
+          }
+        }
+      } catch {}
+      if (!loaded) {
+        const savedDeliveroo = localStorage.getItem("deliveroo_access_token");
+        if (savedDeliveroo) {
+          setDeliverooToken(savedDeliveroo);
+          setDeliverooConnected(true);
+          loadDeliverooReviews(savedDeliveroo);
+        }
+      }
+    }
 
     const token = params.get("google_token");
 
@@ -244,6 +351,8 @@ export default function ReviewsHub() {
   }, []);
 
 
+
+ useEffect(() => { establishmentsRef.current = establishments; }, [establishments]);
 
  const refreshGoogleToken = async (): Promise<string | null> => {
     try {
@@ -418,6 +527,124 @@ export default function ReviewsHub() {
     }
   };
 
+ const loadUberEatsReviews = async (token: string) => {
+   try {
+     const storesRes = await fetch("/api/reviews/ubereats", {
+       headers: { "x-ubereats-token": token },
+     });
+     const storesData = await storesRes.json();
+
+     if (!storesData.stores?.length) {
+       if (storesData.message || storesData.error) {
+         showToast("Uber Eats : " + (storesData.message || storesData.error?.message || "Accès refusé — vérifiez les permissions de l'app"), "error");
+       }
+       return;
+     }
+
+     const currentEstablishments = establishmentsRef.current;
+     const allUberReviews: Review[] = [];
+
+     for (const store of storesData.stores) {
+       const reviewsRes = await fetch(`/api/reviews/ubereats?storeId=${store.id || store.store_id}`, {
+         headers: { "x-ubereats-token": token },
+       });
+       const reviewsData = await reviewsRes.json();
+
+       // Match to an existing Google establishment by name, or use the store's own ID
+       const matchedEtab = currentEstablishments.find((e) =>
+         e.name.toLowerCase().includes((store.name || "").toLowerCase()) ||
+         (store.name || "").toLowerCase().includes(e.name.toLowerCase())
+       );
+       const establishmentId = matchedEtab?.id || store.id || store.store_id;
+
+       const feedbacks = reviewsData.feedbacks || reviewsData.data || [];
+       if (feedbacks.length) {
+         const mapped: Review[] = feedbacks.map((fb: any) => ({
+           id: `ue_${fb.uuid || fb.order_id || Math.random().toString(36).slice(2)}`,
+           authorName: fb.eater?.name || "Client Uber Eats",
+           initials: (fb.eater?.name || "UE").substring(0, 2).toUpperCase(),
+           avatarColor: ["#ef4444", "#22c55e", "#4f7cff", "#a855f7", "#06b6d4", "#f97316"][Math.floor(Math.random() * 6)],
+           rating: fb.rating || 0,
+           comment: (fb.comments || fb.review || "").trim(),
+           date: fb.created_at ? new Date(fb.created_at).toLocaleDateString("fr-FR") : "Date inconnue",
+           answered: !!fb.reply,
+           reply: fb.reply?.comment || fb.reply || "",
+           establishmentId,
+           platform: "ubereats" as Platform,
+           dateTs: fb.created_at ? new Date(fb.created_at).getTime() : undefined,
+         }));
+         allUberReviews.push(...mapped);
+       }
+     }
+
+     setReviews((prev) => [
+       ...prev.filter((r) => r.platform !== "ubereats"),
+       ...allUberReviews,
+     ]);
+   } catch (e) {
+     console.error("Erreur sync Uber Eats:", e);
+   }
+ };
+
+ const loadDeliverooReviews = async (token: string) => {
+   try {
+     const restaurantsRes = await fetch("/api/reviews/deliveroo", {
+       headers: { "x-deliveroo-token": token },
+     });
+     const restaurantsData = await restaurantsRes.json();
+
+     const restaurants = restaurantsData.restaurants || restaurantsData.data || [];
+     if (!restaurants.length) {
+       if (restaurantsData.message || restaurantsData.error) {
+         showToast("Deliveroo : " + (restaurantsData.message || restaurantsData.error?.message || "Accès refusé — vérifiez les permissions de l'app"), "error");
+       }
+       return;
+     }
+
+     const currentEstablishments = establishmentsRef.current;
+     const allDeliverooReviews: Review[] = [];
+
+     for (const restaurant of restaurants) {
+       const reviewsRes = await fetch(`/api/reviews/deliveroo?restaurantId=${restaurant.id}`, {
+         headers: { "x-deliveroo-token": token },
+       });
+       const reviewsData = await reviewsRes.json();
+
+       const matchedEtab = currentEstablishments.find((e) =>
+         e.name.toLowerCase().includes((restaurant.name || "").toLowerCase()) ||
+         (restaurant.name || "").toLowerCase().includes(e.name.toLowerCase())
+       );
+       const establishmentId = matchedEtab?.id || restaurant.id;
+
+       const reviewsList = reviewsData.reviews || reviewsData.data || [];
+       if (reviewsList.length) {
+         const mapped: Review[] = reviewsList.map((rev: any) => ({
+           id: `dr_${rev.id || rev.uuid || Math.random().toString(36).slice(2)}`,
+           authorName: rev.customer?.name || rev.author || "Client Deliveroo",
+           initials: (rev.customer?.name || rev.author || "DR").substring(0, 2).toUpperCase(),
+           avatarColor: ["#ef4444", "#22c55e", "#4f7cff", "#a855f7", "#06b6d4", "#f97316"][Math.floor(Math.random() * 6)],
+           rating: rev.rating || rev.score || 0,
+           comment: (rev.comment || rev.body || "").trim(),
+           date: rev.created_at ? new Date(rev.created_at).toLocaleDateString("fr-FR") : "Date inconnue",
+           answered: !!rev.reply,
+           reply: rev.reply?.body || rev.reply || "",
+           establishmentId,
+           platform: "deliveroo" as Platform,
+           dateTs: rev.created_at ? new Date(rev.created_at).getTime() : undefined,
+         }));
+         allDeliverooReviews.push(...mapped);
+       }
+     }
+
+     setReviews((prev) => [
+       ...prev.filter((r) => r.platform !== "deliveroo"),
+       ...allDeliverooReviews,
+     ]);
+   } catch (e) {
+     console.error("Erreur sync Deliveroo:", e);
+   }
+ };
+
  const etab = (selectedEtab === "all" ? establishments[0] : establishments.find((e) => e.id === selectedEtab)) || establishments[0] || { id: "", name: "", color: "#4f7cff", avgRating: 0, total: 0, pending: 0 };
 
   const etabReviews = selectedEtab === "all" ? reviews : reviews.filter((r) => r.establishmentId === selectedEtab);
@@ -474,6 +701,8 @@ export default function ReviewsHub() {
       empathique:    "Réponds avec beaucoup d'empathie et de chaleur humaine.",
 
       concis:        "Réponds de manière courte et directe, 2-3 phrases maximum.",
+
+      friendly:      "Réponds de manière décontractée, chaleureuse et amicale, mais en vouvoyant toujours le client (utilise 'vous' et non 'tu').",
 
     };
 
@@ -831,7 +1060,7 @@ export default function ReviewsHub() {
 
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
 
-              {(["professionnel", "empathique", "concis"] as Tone[]).map((t) => (
+              {(["professionnel", "empathique", "concis", "friendly"] as Tone[]).map((t) => (
 
                 <button key={t} className={`tone-btn${tone === t ? " active" : ""}`} onClick={() => setTone(t)}>
 
@@ -956,6 +1185,16 @@ export default function ReviewsHub() {
 
               {googleConnected ? "✓ Google Business connecté" : "🔗 Connecter Google Business"}
 
+            </button>
+
+            <button className="btn btn-ghost" style={{ width: "100%", fontSize: 12, color: uberEatsConnected ? "#06c167" : "#7c7b89" }}
+              onClick={() => { window.location.href = "/api/auth/ubereats"; }}>
+              {uberEatsConnected ? "✓ Uber Eats connecté" : "🔗 Connecter Uber Eats"}
+            </button>
+
+            <button className="btn btn-ghost" style={{ width: "100%", fontSize: 12, color: deliverooConnected ? "#00ccbc" : "#7c7b89" }}
+              onClick={() => { window.location.href = "/api/auth/deliveroo"; }}>
+              {deliverooConnected ? "✓ Deliveroo connecté" : "🔗 Connecter Deliveroo"}
             </button>
 
 
@@ -1420,7 +1659,7 @@ export default function ReviewsHub() {
 
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
 
-                    {(["professionnel", "empathique", "concis"] as Tone[]).map((t) => (
+                    {(["professionnel", "empathique", "concis", "friendly"] as Tone[]).map((t) => (
 
                       <button key={t} className={`tone-btn${tone === t ? " active" : ""}`} onClick={() => setTone(t)}>
 
