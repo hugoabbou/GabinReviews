@@ -120,7 +120,6 @@ export default function ReviewsHub() {
 
   const [toneExamples, setToneExamples]     = useState<Record<string, string>>({});
 
-  const [showApiModal, setShowApiModal]     = useState(false);
 
   const [toast, setToast]                   = useState<{ msg: string; type: "error" | "success" | "info" } | null>(null);
 
@@ -628,6 +627,27 @@ export default function ReviewsHub() {
       : 0,
   }));
 
+  // Group reviews by month for the rating evolution chart
+  const ratingEvolution = (() => {
+    const sorted = [...dashReviews]
+      .filter((r) => r.dateTs)
+      .sort((a, b) => (a.dateTs ?? 0) - (b.dateTs ?? 0));
+    if (sorted.length === 0) return [];
+    const byMonth: Record<string, number[]> = {};
+    sorted.forEach((r) => {
+      const d = new Date(r.dateTs!);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!byMonth[key]) byMonth[key] = [];
+      byMonth[key].push(r.rating);
+    });
+    return Object.entries(byMonth).map(([month, ratings]) => ({
+      month,
+      label: new Date(month + "-01").toLocaleDateString("fr-FR", { month: "short", year: "2-digit" }),
+      avg: ratings.reduce((s, v) => s + v, 0) / ratings.length,
+      count: ratings.length,
+    }));
+  })();
+
 
 
   const navItems = [
@@ -637,8 +657,6 @@ export default function ReviewsHub() {
     { id: "reviews",   icon: "💬", label: "Avis",       badge: pendingCount || undefined },
 
     { id: "alerts",    icon: "🔔", label: "Alertes",    badge: 1 },
-
-    { id: "settings",  icon: "⚙️",  label: "Paramètres" },
 
   ];
 
@@ -776,51 +794,6 @@ export default function ReviewsHub() {
 
 
 
-      {showApiModal && (
-
-        <div className="modal-overlay" onClick={() => setShowApiModal(false)}>
-
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-
-            <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 8, color: "#eeedf4" }}>Clé API Gemini</div>
-
-            <div style={{ fontSize: 13, color: "#7c7b89", marginBottom: 20, lineHeight: 1.6 }}>
-
-              Entre ta clé API Gemini depuis{" "}
-
-              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: "#4f7cff" }}>aistudio.google.com</a>
-
-            </div>
-
-            <div style={{ fontSize: 12, color: "#7c7b89", padding: "10px 14px", background: "rgba(79,124,255,0.08)", borderRadius: 8, marginBottom: 20 }}>
-              La clé API est configurée sur le serveur.
-            </div>
-
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#eeedf4", marginBottom: 6 }}>Exemples de réponses publiées</div>
-
-            <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 10, lineHeight: 1.5 }}>
-              Colle ici 2-3 réponses que tu as déjà publiées sur Google. L'IA imitera ton style et ton vocabulaire.
-            </div>
-
-            <div style={{ fontSize: 12, color: "#7c7b89", padding: "10px 14px", background: "rgba(79,124,255,0.08)", borderRadius: 8, marginBottom: 16 }}>
-              Les exemples de ton sont configurés par restaurant sur le serveur.
-            </div>
-
-            <div style={{ display: "flex", gap: 8 }}>
-
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => {
-                setShowApiModal(false);
-              }}>Fermer</button>
-
-              <button className="btn btn-ghost" onClick={() => setShowApiModal(false)}>Annuler</button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      )}
 
 
 
@@ -1141,29 +1114,6 @@ export default function ReviewsHub() {
               </div>
             )}
 
-            {activeNav === "settings" && (
-              <div>
-                <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Paramètres</div>
-                <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, maxWidth: 540, display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#eeedf4", marginBottom: 6 }}>Clé API Gemini</div>
-                    <div style={{ fontSize: 12, color: "#7c7b89", padding: "10px 14px", background: "rgba(79,124,255,0.08)", borderRadius: 8 }}>
-                      La clé API est configurée sur le serveur.
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#eeedf4", marginBottom: 6 }}>Exemples de réponses publiées</div>
-                    <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 10, lineHeight: 1.5 }}>Colle ici 2-3 réponses que tu as déjà publiées sur Google. L'IA imitera ton style et ton vocabulaire.</div>
-                    <div style={{ fontSize: 12, color: "#7c7b89", padding: "10px 14px", background: "rgba(79,124,255,0.08)", borderRadius: 8 }}>
-                      Les exemples de ton sont configurés par restaurant sur le serveur.
-                    </div>
-                  </div>
-                  <button className="btn btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => {
-                      showToast("Les paramètres sont configurés sur le serveur", "info");
-                  }}>OK</button>
-                </div>
-              </div>
-            )}
 
             {activeNav === "dashboard" && <>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
@@ -1225,6 +1175,48 @@ export default function ReviewsHub() {
                   ))}
                 </div>
               </div>
+            </div>
+
+            <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 20 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 16 }}>Évolution de la note moyenne</div>
+              {ratingEvolution.length < 2 ? (
+                <div style={{ textAlign: "center", padding: "32px 0", color: "#5a5968", fontSize: 13 }}>Pas encore assez de données pour afficher l'évolution</div>
+              ) : (() => {
+                const W = 600, H = 160, PL = 32, PR = 16, PT = 12, PB = 28;
+                const iW = W - PL - PR, iH = H - PT - PB;
+                const minY = 1, maxY = 5;
+                const xStep = iW / (ratingEvolution.length - 1);
+                const toX = (i: number) => PL + i * xStep;
+                const toY = (v: number) => PT + iH - ((v - minY) / (maxY - minY)) * iH;
+                const points = ratingEvolution.map((d, i) => `${toX(i)},${toY(d.avg)}`).join(" ");
+                const areaPoints = `${PL},${PT + iH} ${points} ${PL + (ratingEvolution.length - 1) * xStep},${PT + iH}`;
+                const gridLines = [1, 2, 3, 4, 5];
+                return (
+                  <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", overflow: "visible" }}>
+                    {/* grid lines */}
+                    {gridLines.map((v) => (
+                      <g key={v}>
+                        <line x1={PL} y1={toY(v)} x2={W - PR} y2={toY(v)} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
+                        <text x={PL - 6} y={toY(v) + 4} textAnchor="end" fontSize={9} fill="#5a5968">{v}</text>
+                      </g>
+                    ))}
+                    {/* area fill */}
+                    <polygon points={areaPoints} fill="rgba(79,124,255,0.08)" />
+                    {/* line */}
+                    <polyline points={points} fill="none" stroke="#4f7cff" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+                    {/* dots + labels */}
+                    {ratingEvolution.map((d, i) => (
+                      <g key={d.month}>
+                        <circle cx={toX(i)} cy={toY(d.avg)} r={4} fill="#4f7cff" stroke="#0f0f12" strokeWidth={2} />
+                        <title>{d.label} — {d.avg.toFixed(1)} ★ ({d.count} avis)</title>
+                        <text x={toX(i)} y={H - 4} textAnchor="middle" fontSize={9} fill="#5a5968">{d.label}</text>
+                        {/* avg label above dot */}
+                        <text x={toX(i)} y={toY(d.avg) - 8} textAnchor="middle" fontSize={9} fill="#a0a0b0">{d.avg.toFixed(1)}</text>
+                      </g>
+                    ))}
+                  </svg>
+                );
+              })()}
             </div>
             </>}
 
