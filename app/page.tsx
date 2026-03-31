@@ -376,8 +376,6 @@ export default function ReviewsHub() {
 
       setEstablishments(realEtabs);
 
-      setSelectedEtab(realEtabs[0].id);
-
       setGmbAccountId(accountId);
 
       setGmbLocationId(realEtabs[0].id);
@@ -446,7 +444,6 @@ export default function ReviewsHub() {
         }));
         setReviews(googleReviews);
         setEstablishments((prev) => prev.length ? prev : [{ id: locationId, name: "Mon établissement", color: "#4f7cff", avgRating: 0, total: googleReviews.length, pending: googleReviews.filter((r) => !r.answered).length }]);
-        setSelectedEtab(locationId);
         setGmbAccountId(accountId);
         setGmbLocationId(locationId);
       } else if (reviewsData.error) {
@@ -457,7 +454,7 @@ export default function ReviewsHub() {
     }
   };
 
- const etab = establishments.find((e) => e.id === selectedEtab) || establishments[0];
+ const etab = (selectedEtab === "all" ? establishments[0] : establishments.find((e) => e.id === selectedEtab)) || establishments[0] || { id: "", name: "", color: "#4f7cff", avgRating: 0, total: 0, pending: 0 };
 
   const etabReviews = selectedEtab === "all" ? reviews : reviews.filter((r) => r.establishmentId === selectedEtab);
 
