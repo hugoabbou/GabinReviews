@@ -486,9 +486,8 @@ export default function ReviewsHub() {
      const storesData = await storesRes.json();
 
      if (!storesData.stores?.length) {
-       if (storesData.message || storesData.error) {
-         showToast("Uber Eats : " + (storesData.message || storesData.error?.message || "Accès refusé — vérifiez les permissions de l'app"), "error");
-       }
+       const msg = storesData.message || storesData.error || JSON.stringify(storesData);
+       showToast("Uber Eats : " + msg, "error");
        return;
      }
 

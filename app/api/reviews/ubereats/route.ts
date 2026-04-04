@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-async function getUberToken(): Promise<string | null> {
+async function getUberToken(): Promise<{ token: string | null; error?: string }> {
   const res = await fetch("https://auth.uber.com/oauth/v2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -12,13 +12,16 @@ async function getUberToken(): Promise<string | null> {
     }),
   });
   const data = await res.json();
-  return data.access_token || null;
+  if (!data.access_token) {
+    return { token: null, error: JSON.stringify(data) };
+  }
+  return { token: data.access_token };
 }
 
 export async function GET(req: Request) {
-  const token = await getUberToken();
+  const { token, error: tokenError } = await getUberToken();
   if (!token) {
-    return NextResponse.json({ error: "Impossible d'obtenir un token Uber Eats" }, { status: 401 });
+    return NextResponse.json({ error: `Token error: ${tokenError}` }, { status: 401 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -28,12 +31,14 @@ export async function GET(req: Request) {
     const res = await fetch("https://api.uber.com/v2/eats/stores", {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return NextResponse.json(await res.json());
+    const data = await res.json();
+    return NextResponse.json({ ...data, _debug_status: res.status });
   }
 
   const res = await fetch(
     `https://api.uber.com/v2/eats/stores/${storeId}/eater_feedbacks`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  return NextResponse.json(await res.json());
+  const data = await res.json();
+  return NextResponse.json({ ...data, _debug_status: res.status });
 }
