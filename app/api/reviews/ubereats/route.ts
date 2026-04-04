@@ -36,5 +36,12 @@ export async function GET(req: Request) {
     `https://api.uber.com/v2/eats/stores/${storeId}/eater_feedbacks`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  return NextResponse.json(await res.json());
+  const text = await res.text();
+  console.log(`Uber feedbacks status: ${res.status}, body: ${text}`);
+  if (!text) return NextResponse.json({ eater_feedbacks: [], _debug: "empty response" });
+  try {
+    return NextResponse.json(JSON.parse(text));
+  } catch {
+    return NextResponse.json({ eater_feedbacks: [], _debug: text }, { status: 200 });
+  }
 }
