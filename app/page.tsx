@@ -505,7 +505,7 @@ export default function ReviewsHub() {
        );
        const establishmentId = matchedEtab?.id || store.id || store.store_id;
 
-       const feedbacks = reviewsData.eater_feedbacks || reviewsData.feedbacks || reviewsData.data || [];
+       const feedbacks = reviewsData.feedbacks || reviewsData.eater_feedbacks || reviewsData.data || [];
        if (!feedbacks.length) console.log("Uber Eats feedbacks response:", JSON.stringify(reviewsData));
        if (feedbacks.length) {
          const mapped: Review[] = feedbacks.map((fb: any) => ({

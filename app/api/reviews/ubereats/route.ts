@@ -33,7 +33,7 @@ export async function GET(req: Request) {
 
   // Fetch feedbacks for a specific store
   const res = await fetch(
-    `https://api.uber.com/v2/eats/stores/${storeId}/eater_feedbacks`,
+    `https://api.uber.com/v1/eats/stores/${storeId}/feedbacks`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
   const text = await res.text();
