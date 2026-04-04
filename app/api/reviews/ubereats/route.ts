@@ -31,17 +31,21 @@ export async function GET(req: Request) {
     return NextResponse.json({ stores });
   }
 
-  // Fetch feedbacks for a specific store
-  const res = await fetch(
+  // Try multiple known endpoint formats
+  const endpoints = [
     `https://api.uber.com/v1/eats/stores/${storeId}/eater_feedbacks`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  const text = await res.text();
-  console.log(`Uber feedbacks status: ${res.status}, body: ${text}`);
-  if (!text) return NextResponse.json({ eater_feedbacks: [], _debug: "empty response" });
-  try {
-    return NextResponse.json(JSON.parse(text));
-  } catch {
-    return NextResponse.json({ eater_feedbacks: [], _debug: text }, { status: 200 });
+    `https://api.uber.com/v2/eats/stores/${storeId}/eater_feedbacks`,
+    `https://api.uber.com/v1/eats/stores/${storeId}/feedbacks`,
+  ];
+
+  for (const url of endpoints) {
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const text = await res.text();
+    console.log(`Uber [${res.status}] ${url} → ${text.slice(0, 200)}`);
+    if (res.status === 200 && text) {
+      try { return NextResponse.json(JSON.parse(text)); } catch {}
+    }
   }
+
+  return NextResponse.json({ feedbacks: [], eater_feedbacks: [], _debug: "all endpoints returned 404" });
 }
