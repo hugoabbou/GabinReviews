@@ -1,34 +1,22 @@
 import { NextResponse } from "next/server";
-import { getStore } from "@netlify/blobs";
 
 export async function POST() {
-  let refreshToken: string | null = null;
-
-  try {
-    const store = getStore("ubereats-tokens");
-    refreshToken = await store.get("refresh_token", { type: "text" });
-  } catch {}
-
-  if (!refreshToken) {
-    return NextResponse.json({ error: "No refresh token" }, { status: 401 });
-  }
-
-  const tokenRes = await fetch("https://auth.uber.com/oauth/v2/token", {
+  const res = await fetch("https://auth.uber.com/oauth/v2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      refresh_token: refreshToken,
       client_id: process.env.UBER_CLIENT_ID!,
       client_secret: process.env.UBER_CLIENT_SECRET!,
-      grant_type: "refresh_token",
+      grant_type: "client_credentials",
+      scope: "eats.store eats.report",
     }),
   });
 
-  const tokenData = await tokenRes.json();
+  const data = await res.json();
 
-  if (!tokenData.access_token) {
-    return NextResponse.json({ error: "Failed to refresh token" }, { status: 401 });
+  if (!data.access_token) {
+    return NextResponse.json({ error: "Failed to get token" }, { status: 401 });
   }
 
-  return NextResponse.json({ access_token: tokenData.access_token });
+  return NextResponse.json({ access_token: data.access_token });
 }

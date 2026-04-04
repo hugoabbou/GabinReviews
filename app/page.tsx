@@ -153,8 +153,6 @@ export default function ReviewsHub() {
 
   const [googleConnected, setGoogleConnected] = useState(false);
 
-  const [uberEatsToken, setUberEatsToken]       = useState("");
-
   const [uberEatsConnected, setUberEatsConnected] = useState(false);
 
   const [deliverooToken, setDeliverooToken]       = useState("");
@@ -192,20 +190,6 @@ export default function ReviewsHub() {
       }
     }, 55 * 60 * 1000);
 
-    // Rafraîchit le token Uber Eats toutes les 55 minutes
-    const uberRefreshInterval = setInterval(async () => {
-      const saved = localStorage.getItem("ubereats_access_token");
-      if (!saved) return;
-      const res = await fetch("/api/auth/ubereats/refresh", { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.access_token) {
-          localStorage.setItem("ubereats_access_token", data.access_token);
-          setUberEatsToken(data.access_token);
-        }
-      }
-    }, 55 * 60 * 1000);
-
     // Rafraîchit le token Deliveroo toutes les 55 minutes
     const deliverooRefreshInterval = setInterval(async () => {
       const saved = localStorage.getItem("deliveroo_access_token");
@@ -220,7 +204,7 @@ export default function ReviewsHub() {
       }
     }, 55 * 60 * 1000);
 
-    return () => { clearInterval(refreshInterval); clearInterval(uberRefreshInterval); clearInterval(deliverooRefreshInterval); };
+    return () => { clearInterval(refreshInterval); clearInterval(deliverooRefreshInterval); };
   }, []);
 
   useEffect(() => {
@@ -230,40 +214,9 @@ export default function ReviewsHub() {
 
     const params = new URLSearchParams(window.location.search);
 
-    // Uber Eats token from OAuth callback
-    const uberToken = params.get("ubereats_token");
-    if (uberToken) {
-      localStorage.setItem("ubereats_access_token", uberToken);
-      setUberEatsToken(uberToken);
-      setUberEatsConnected(true);
-      window.history.replaceState({}, "", "/");
-      showToast("Uber Eats connecté ✓", "success");
-      loadUberEatsReviews(uberToken);
-    } else {
-      // Try server-side refresh first
-      let loaded = false;
-      try {
-        const res = await fetch("/api/auth/ubereats/refresh", { method: "POST" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.access_token) {
-            localStorage.setItem("ubereats_access_token", data.access_token);
-            setUberEatsToken(data.access_token);
-            setUberEatsConnected(true);
-            loadUberEatsReviews(data.access_token);
-            loaded = true;
-          }
-        }
-      } catch {}
-      if (!loaded) {
-        const savedUber = localStorage.getItem("ubereats_access_token");
-        if (savedUber) {
-          setUberEatsToken(savedUber);
-          setUberEatsConnected(true);
-          loadUberEatsReviews(savedUber);
-        }
-      }
-    }
+    // Uber Eats — client credentials, pas besoin de token utilisateur
+    setUberEatsConnected(true);
+    loadUberEatsReviews();
 
     // Deliveroo token from OAuth callback
     const deliverooTokenParam = params.get("deliveroo_token");
@@ -527,11 +480,9 @@ export default function ReviewsHub() {
     }
   };
 
- const loadUberEatsReviews = async (token: string) => {
+ const loadUberEatsReviews = async () => {
    try {
-     const storesRes = await fetch("/api/reviews/ubereats", {
-       headers: { "x-ubereats-token": token },
-     });
+     const storesRes = await fetch("/api/reviews/ubereats");
      const storesData = await storesRes.json();
 
      if (!storesData.stores?.length) {
@@ -545,9 +496,7 @@ export default function ReviewsHub() {
      const allUberReviews: Review[] = [];
 
      for (const store of storesData.stores) {
-       const reviewsRes = await fetch(`/api/reviews/ubereats?storeId=${store.id || store.store_id}`, {
-         headers: { "x-ubereats-token": token },
-       });
+       const reviewsRes = await fetch(`/api/reviews/ubereats?storeId=${store.id || store.store_id}`);
        const reviewsData = await reviewsRes.json();
 
        // Match to an existing Google establishment by name, or use the store's own ID
@@ -1190,7 +1139,7 @@ export default function ReviewsHub() {
             </button>
 
             <button className="btn btn-ghost" style={{ width: "100%", fontSize: 12, color: uberEatsConnected ? "#06c167" : "#7c7b89" }}
-              onClick={() => { window.location.href = "/api/auth/ubereats"; }}>
+              onClick={() => loadUberEatsReviews()}>
               {uberEatsConnected ? "✓ Uber Eats connecté" : "🔗 Connecter Uber Eats"}
             </button>
 
