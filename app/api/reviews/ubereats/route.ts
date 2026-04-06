@@ -33,23 +33,20 @@ export async function GET(req: Request) {
 
   // Try async report API with different report_type values
   const reportTypes = [
-    "SURVEY_RESPONSES",
-    "RATING",
-    "EATER_RATING",
-    "STORE_RATING",
-    "REVIEW",
-    "REVIEWS",
-    "ORDER_FEEDBACK",
+    "FEEDBACK_REPORT",
+    "EATER_FEEDBACK_REPORT",
+    "CUSTOMER_FEEDBACK_REPORT",
+    "RATING_REPORT",
+    "STORE_RATING_REPORT",
+    "EATER_REVIEW_REPORT",
     "PAYMENT_DETAILS_REPORT",
-    "TRANSACTION_SUMMARY_REPORT",
-    "ORDER_HEATMAP_REPORT",
   ];
 
   for (const reportType of reportTypes) {
     const body = {
       report_type: reportType,
       store_uuids: [storeId],
-      start_date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      start_date: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       end_date: new Date().toISOString().split("T")[0],
     };
 
