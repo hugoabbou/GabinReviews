@@ -36,12 +36,14 @@ export async function GET(req: Request) {
     `https://api.uber.com/v1/eats/stores/${storeId}/eater_feedbacks`,
     `https://api.uber.com/v2/eats/stores/${storeId}/eater_feedbacks`,
     `https://api.uber.com/v1/eats/stores/${storeId}/feedbacks`,
+    `https://api.uber.com/v2/eats/report/eater_feedbacks?store_uuid=${storeId}`,
+    `https://api.uber.com/v1/eats/report?store_uuid=${storeId}`,
   ];
 
   for (const url of endpoints) {
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } });
     const text = await res.text();
-    console.log(`Uber [${res.status}] ${url} → ${text.slice(0, 200)}`);
+    console.log(`Uber [${res.status}] ${url} → ${text.slice(0, 300)}`);
     if (res.status === 200 && text) {
       try { return NextResponse.json(JSON.parse(text)); } catch {}
     }
