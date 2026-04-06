@@ -31,23 +31,43 @@ export async function GET(req: Request) {
     return NextResponse.json({ stores });
   }
 
-  // Try multiple known endpoint formats
-  const endpoints = [
-    `https://api.uber.com/v1/eats/stores/${storeId}/eater_feedbacks`,
-    `https://api.uber.com/v2/eats/stores/${storeId}/eater_feedbacks`,
-    `https://api.uber.com/v1/eats/stores/${storeId}/feedbacks`,
-    `https://api.uber.com/v2/eats/report/eater_feedbacks?store_uuid=${storeId}`,
-    `https://api.uber.com/v1/eats/report?store_uuid=${storeId}`,
+  // Try async report API with different report_type values
+  const reportTypes = [
+    "EATER_FEEDBACK",
+    "CUSTOMER_FEEDBACK",
+    "FEEDBACK",
+    "EATER_REVIEW",
+    "STORE_FEEDBACK",
   ];
 
-  for (const url of endpoints) {
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } });
+  for (const reportType of reportTypes) {
+    const body = {
+      report_type: reportType,
+      store_uuids: [storeId],
+      start_date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      end_date: new Date().toISOString().split("T")[0],
+    };
+
+    const res = await fetch("https://api.uber.com/v1/eats/report", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
     const text = await res.text();
-    console.log(`Uber [${res.status}] ${url} → ${text.slice(0, 300)}`);
-    if (res.status === 200 && text) {
-      try { return NextResponse.json(JSON.parse(text)); } catch {}
+    console.log(`Uber report [${res.status}] type=${reportType} → ${text.slice(0, 300)}`);
+
+    if (res.status === 200 || res.status === 201 || res.status === 202) {
+      try {
+        const data = JSON.parse(text);
+        // Report job created — return job info so we can poll later
+        return NextResponse.json({ _report_job: data, _report_type: reportType, feedbacks: [], eater_feedbacks: [] });
+      } catch {}
     }
   }
 
-  return NextResponse.json({ feedbacks: [], eater_feedbacks: [], _debug: "all endpoints returned 404" });
+  return NextResponse.json({ feedbacks: [], eater_feedbacks: [], _debug: "all report types failed" });
 }
