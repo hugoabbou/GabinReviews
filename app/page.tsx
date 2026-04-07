@@ -468,7 +468,7 @@ export default function ReviewsHub() {
           platform: "google" as Platform,
           dateTs: rev.createTime ? new Date(rev.createTime).getTime() : undefined,
         }));
-        setReviews(googleReviews);
+        setReviews((prev) => [...prev.filter((r) => r.platform !== "google"), ...googleReviews]);
         setEstablishments((prev) => prev.length ? prev : [{ id: locationId, name: "Mon établissement", color: "#4f7cff", avgRating: 0, total: googleReviews.length, pending: googleReviews.filter((r) => !r.answered).length }]);
         setGmbAccountId(accountId);
         setGmbLocationId(locationId);
