@@ -22,7 +22,19 @@ export async function GET(req: Request) {
 
   if (!storeId) {
     const storeIds = (process.env.UBER_STORE_IDS || "").split(",").map((s) => s.trim()).filter(Boolean);
-    return NextResponse.json({ stores: storeIds.map((id) => ({ id, name: id })) });
+    const stores = await Promise.all(storeIds.map(async (id) => {
+      try {
+        const reviewStore = getStore("ubereats-reviews");
+        const cached = await reviewStore.get(id, { type: "text" });
+        if (cached) {
+          const rows = JSON.parse(cached);
+          const name = rows[0]?.["Store"] || id;
+          return { id, name };
+        }
+      } catch {}
+      return { id, name: id };
+    }));
+    return NextResponse.json({ stores });
   }
 
   const token = await getUberToken();
