@@ -509,18 +509,18 @@ export default function ReviewsHub() {
        if (!feedbacks.length) console.log("Uber Eats feedbacks response:", JSON.stringify(reviewsData));
        if (feedbacks.length) {
          const mapped: Review[] = feedbacks.map((fb: any) => ({
-           id: `ue_${fb.uuid || fb.order_id || Math.random().toString(36).slice(2)}`,
-           authorName: fb.eater?.name || "Client Uber Eats",
-           initials: (fb.eater?.name || "UE").substring(0, 2).toUpperCase(),
+           id: `ue_${fb["Order UUID"] || fb.uuid || fb.order_id || Math.random().toString(36).slice(2)}`,
+           authorName: "Client Uber Eats",
+           initials: "UE",
            avatarColor: ["#ef4444", "#22c55e", "#4f7cff", "#a855f7", "#06b6d4", "#f97316"][Math.floor(Math.random() * 6)],
-           rating: fb.rating || 0,
-           comment: (fb.comments || fb.review || "").trim(),
-           date: fb.created_at ? new Date(fb.created_at).toLocaleDateString("fr-FR") : "Date inconnue",
-           answered: !!fb.reply,
-           reply: fb.reply?.comment || fb.reply || "",
+           rating: parseFloat(fb["Rating Value"] || fb.rating || "0") || 0,
+           comment: (fb["Comment"] || fb.comments || fb.review || "").trim(),
+           date: fb["Rating Date"] ? new Date(fb["Rating Date"]).toLocaleDateString("fr-FR") : "Date inconnue",
+           answered: false,
+           reply: "",
            establishmentId,
            platform: "ubereats" as Platform,
-           dateTs: fb.created_at ? new Date(fb.created_at).getTime() : undefined,
+           dateTs: fb["Rating Date"] ? new Date(fb["Rating Date"]).getTime() : undefined,
          }));
          allUberReviews.push(...mapped);
        }
