@@ -33,14 +33,12 @@ export async function GET(req: Request) {
 
   // Try async report API with different report_type values
   const reportTypes = [
-    "ORDER_DETAILS_REPORT",
+    "CUSTOMER_AND_DELIVERY_FEEDBACK_REPORT",
+    "CUSTOMER_DELIVERY_FEEDBACK_REPORT",
+    "DELIVERY_FEEDBACK_REPORT",
+    "ORDER_ERRORS_REPORT",
+    "ORDER_HISTORY_REPORT",
     "DOWNTIME_REPORT",
-    "SALES_SUMMARY_REPORT",
-    "STORE_DOWNTIME_REPORT",
-    "STORE_SUMMARY_REPORT",
-    "STORE_PERFORMANCE_REPORT",
-    "MENU_ITEM_REPORT",
-    "DELIVERY_DETAILS_REPORT",
   ];
 
   for (const reportType of reportTypes) {
