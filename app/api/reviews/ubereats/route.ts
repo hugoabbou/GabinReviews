@@ -34,11 +34,6 @@ export async function GET(req: Request) {
   // Try async report API with different report_type values
   const reportTypes = [
     "CUSTOMER_AND_DELIVERY_FEEDBACK_REPORT",
-    "CUSTOMER_DELIVERY_FEEDBACK_REPORT",
-    "DELIVERY_FEEDBACK_REPORT",
-    "ORDER_ERRORS_REPORT",
-    "ORDER_HISTORY_REPORT",
-    "DOWNTIME_REPORT",
   ];
 
   for (const reportType of reportTypes) {
@@ -46,7 +41,7 @@ export async function GET(req: Request) {
       report_type: reportType,
       store_uuids: [storeId],
       start_date: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      end_date: new Date().toISOString().split("T")[0],
+      end_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     };
 
     const res = await fetch("https://api.uber.com/v1/eats/report", {
