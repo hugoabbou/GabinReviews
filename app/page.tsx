@@ -214,10 +214,6 @@ export default function ReviewsHub() {
 
     const params = new URLSearchParams(window.location.search);
 
-    // Uber Eats — client credentials, pas besoin de token utilisateur
-    setUberEatsConnected(true);
-    loadUberEatsReviews();
-
     // Deliveroo token from OAuth callback
     const deliverooTokenParam = params.get("deliveroo_token");
     if (deliverooTokenParam) {
@@ -437,6 +433,10 @@ export default function ReviewsHub() {
       }
       setReviews(allReviews);
 
+      // Charge les avis Uber Eats maintenant que les établissements sont connus
+      setUberEatsConnected(true);
+      loadUberEatsReviews(realEtabs);
+
     }
 
   } catch (e) {
@@ -480,7 +480,7 @@ export default function ReviewsHub() {
     }
   };
 
- const loadUberEatsReviews = async () => {
+ const loadUberEatsReviews = async (etabs?: Establishment[]) => {
    try {
      const storesRes = await fetch("/api/reviews/ubereats");
      const storesData = await storesRes.json();
@@ -491,7 +491,7 @@ export default function ReviewsHub() {
        return;
      }
 
-     const currentEstablishments = establishmentsRef.current;
+     const currentEstablishments = etabs || establishmentsRef.current;
      const allUberReviews: Review[] = [];
 
      for (const store of storesData.stores) {
