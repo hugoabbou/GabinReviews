@@ -499,7 +499,7 @@ export default function ReviewsHub() {
        const reviewsData = await reviewsRes.json();
 
        // Match to an existing Google establishment by name, or use the store's own ID
-       const storeNameWords = (store.name || "").toLowerCase().split(/[\s\-–,]+/).filter(w => w.length > 3);
+       const storeNameWords = (store.name || "").toLowerCase().split(/[\s\-–,]+/).filter((w: string) => w.length > 3);
        const matchedEtab = currentEstablishments.find((e) =>
          storeNameWords.some(w => e.name.toLowerCase().includes(w))
        );
