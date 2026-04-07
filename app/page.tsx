@@ -499,9 +499,9 @@ export default function ReviewsHub() {
        const reviewsData = await reviewsRes.json();
 
        // Match to an existing Google establishment by name, or use the store's own ID
+       const storeNameWords = (store.name || "").toLowerCase().split(/[\s\-–,]+/).filter(w => w.length > 3);
        const matchedEtab = currentEstablishments.find((e) =>
-         e.name.toLowerCase().includes((store.name || "").toLowerCase()) ||
-         (store.name || "").toLowerCase().includes(e.name.toLowerCase())
+         storeNameWords.some(w => e.name.toLowerCase().includes(w))
        );
        const establishmentId = matchedEtab?.id || store.id || store.store_id;
 
@@ -510,7 +510,7 @@ export default function ReviewsHub() {
        if (feedbacks.length) {
          const mapped: Review[] = feedbacks.map((fb: any) => ({
            id: `ue_${fb["Order UUID"] || fb.uuid || fb.order_id || Math.random().toString(36).slice(2)}`,
-           authorName: "Client Uber Eats",
+           authorName: fb["Order ID"] ? `Commande #${fb["Order ID"]}` : "Client Uber Eats",
            initials: "UE",
            avatarColor: ["#ef4444", "#22c55e", "#4f7cff", "#a855f7", "#06b6d4", "#f97316"][Math.floor(Math.random() * 6)],
            rating: parseFloat(fb["Rating Value"] || fb.rating || "0") || 0,
