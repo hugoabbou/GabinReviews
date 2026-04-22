@@ -172,20 +172,21 @@ export default function ReviewsHub() {
 
 
   useEffect(() => {
-    // Charge les exemples depuis le serveur
-    fetch("/api/config").then((r) => r.json()).then((data) => {
+    // Charge les paramètres IA (Netlify Blobs) et les exemples par défaut (/api/config)
+    Promise.all([
+      fetch("/api/settings").then((r) => r.json()),
+      fetch("/api/config").then((r) => r.json()),
+    ]).then(([saved, defaults]) => {
       const defaultTones = (apiText: string): Record<Tone, string> => ({
         professionnel: "", empathique: "", concis: "", friendly: apiText,
       });
-      const savedGabin      = localStorage.getItem("tone_examples_gabin");
-      const savedCotesushi  = localStorage.getItem("tone_examples_cotesushi");
       setToneExamples({
-        gabin:     savedGabin     ? JSON.parse(savedGabin)     : defaultTones(data.toneExamplesGabin     || ""),
-        cotesushi: savedCotesushi ? JSON.parse(savedCotesushi) : defaultTones(data.toneExamplesCoteSushi || ""),
+        gabin:     saved.toneExamplesGabin     || defaultTones(defaults.toneExamplesGabin     || ""),
+        cotesushi: saved.toneExamplesCoteSushi || defaultTones(defaults.toneExamplesCoteSushi || ""),
       });
       setAiInstructions({
-        gabin:     localStorage.getItem("ai_instructions_gabin")     || "",
-        cotesushi: localStorage.getItem("ai_instructions_cotesushi") || "",
+        gabin:     saved.aiInstructionsGabin     || "",
+        cotesushi: saved.aiInstructionsCoteSushi || "",
       });
     });
 
@@ -1632,14 +1633,25 @@ export default function ReviewsHub() {
                   </div>
 
                   <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <button className="btn btn-primary" style={{ padding: "10px 24px" }} onClick={() => {
-                      setToneExamples(settingsDraft);
-                      setAiInstructions(instructionsDraft);
-                      localStorage.setItem("tone_examples_gabin",     JSON.stringify(settingsDraft.gabin     || {}));
-                      localStorage.setItem("tone_examples_cotesushi", JSON.stringify(settingsDraft.cotesushi || {}));
-                      localStorage.setItem("ai_instructions_gabin",     instructionsDraft.gabin     || "");
-                      localStorage.setItem("ai_instructions_cotesushi", instructionsDraft.cotesushi || "");
-                      showToast("Paramètres sauvegardés ✓", "success");
+                    <button className="btn btn-primary" style={{ padding: "10px 24px" }} onClick={async () => {
+                      const payload = {
+                        toneExamplesGabin:     settingsDraft.gabin     || {},
+                        toneExamplesCoteSushi: settingsDraft.cotesushi || {},
+                        aiInstructionsGabin:     instructionsDraft.gabin     || "",
+                        aiInstructionsCoteSushi: instructionsDraft.cotesushi || "",
+                      };
+                      const res = await fetch("/api/settings", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                      });
+                      if (res.ok) {
+                        setToneExamples(settingsDraft);
+                        setAiInstructions(instructionsDraft);
+                        showToast("Paramètres sauvegardés ✓", "success");
+                      } else {
+                        showToast("Erreur lors de la sauvegarde", "error");
+                      }
                     }}>Sauvegarder</button>
                   </div>
 
