@@ -119,9 +119,10 @@ export default function ReviewsHub() {
 
 
   const [toneExamples, setToneExamples]     = useState<Record<string, Record<Tone, string>>>({});
-  const [showToneSettings, setShowToneSettings] = useState(false);
+  const [aiInstructions, setAiInstructions] = useState<Record<string, string>>({});
   const [settingsTab, setSettingsTab]       = useState<"gabin" | "cotesushi">("gabin");
   const [settingsDraft, setSettingsDraft]   = useState<Record<string, Record<Tone, string>>>({});
+  const [instructionsDraft, setInstructionsDraft] = useState<Record<string, string>>({});
 
 
   const [toast, setToast]                   = useState<{ msg: string; type: "error" | "success" | "info" } | null>(null);
@@ -182,6 +183,10 @@ export default function ReviewsHub() {
         gabin:     savedGabin     ? JSON.parse(savedGabin)     : defaultTones(data.toneExamplesGabin     || ""),
         cotesushi: savedCotesushi ? JSON.parse(savedCotesushi) : defaultTones(data.toneExamplesCoteSushi || ""),
       });
+      setAiInstructions({
+        gabin:     localStorage.getItem("ai_instructions_gabin")     || "",
+        cotesushi: localStorage.getItem("ai_instructions_cotesushi") || "",
+      });
     });
 
     // Rafraîchit le token Google toutes les 55 minutes proactivement
@@ -214,6 +219,13 @@ export default function ReviewsHub() {
 
     return () => { clearInterval(refreshInterval); clearInterval(deliverooRefreshInterval); };
   }, []);
+
+  useEffect(() => {
+    if (activeNav === "settings") {
+      setSettingsDraft(JSON.parse(JSON.stringify(toneExamples)));
+      setInstructionsDraft(JSON.parse(JSON.stringify(aiInstructions)));
+    }
+  }, [activeNav]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     (async () => {
@@ -681,8 +693,13 @@ export default function ReviewsHub() {
       ? `\n\nVoici des exemples de réponses déjà publiées, adopte exactement le même style, ton et vocabulaire :\n${exampleText}`
       : "";
 
+    const instructions = (aiInstructions[etabKey] || "").trim();
+    const instructionsContext = instructions
+      ? `\n\nConsignes absolues à respecter :\n${instructions}`
+      : "";
+
     const platformLabel = PLATFORM_META[review.platform].label;
-    const prompt = `Tu gères les avis ${platformLabel} de "${reviewEtab.name}". Client: ${review.authorName}, note: ${review.rating}/5. Avis: "${review.comment}". ${toneMap[tone]} Réponds en français, 80 mots max. Uniquement le texte de la réponse.${styleContext}`;
+    const prompt = `Tu gères les avis ${platformLabel} de "${reviewEtab.name}". Client: ${review.authorName}, note: ${review.rating}/5. Avis: "${review.comment}". ${toneMap[tone]} Réponds en français, 80 mots max. Uniquement le texte de la réponse.${styleContext}${instructionsContext}`;
 
 
 
@@ -847,6 +864,8 @@ export default function ReviewsHub() {
 
     { id: "alerts",    icon: "🔔", label: "Alertes",    badge: 1 },
 
+    { id: "settings",  icon: "⚙",  label: "Paramètres" },
+
   ];
 
 
@@ -986,60 +1005,6 @@ export default function ReviewsHub() {
 
 
 
-      {showToneSettings && (
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowToneSettings(false); }}>
-          <div className="modal" style={{ width: 520, maxWidth: "95vw", maxHeight: "85vh", display: "flex", flexDirection: "column", gap: 0 }}>
-
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-              <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 15, fontWeight: 600 }}>⚙ Exemples par ton</div>
-              <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 13 }} onClick={() => setShowToneSettings(false)}>✕</button>
-            </div>
-
-            <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 14, lineHeight: 1.6 }}>
-              Ces exemples guident l&apos;IA pour adopter le bon style. Collez des réponses publiées en exemple.
-            </div>
-
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              {([{ key: "gabin", label: "Gabin" }, { key: "cotesushi", label: "Côté Sushi" }] as { key: "gabin" | "cotesushi"; label: string }[]).map(({ key, label }) => (
-                <button key={key} className={`pill${settingsTab === key ? " active" : ""}`} onClick={() => setSettingsTab(key)}>
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
-              {(["professionnel", "empathique", "concis", "friendly"] as Tone[]).map((t) => (
-                <div key={t}>
-                  <div style={{ fontSize: 12, color: "#a78bfa", fontWeight: 600, marginBottom: 6, textTransform: "capitalize" }}>{t}</div>
-                  <textarea
-                    className="input-field"
-                    rows={3}
-                    placeholder={`Exemples de réponses publiées en mode « ${t} »…`}
-                    value={settingsDraft[settingsTab]?.[t] || ""}
-                    onChange={(e) => setSettingsDraft((prev) => ({
-                      ...prev,
-                      [settingsTab]: { ...prev[settingsTab], [t]: e.target.value },
-                    }))}
-                    style={{ resize: "vertical" }}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 18, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-              <button className="btn btn-ghost" onClick={() => setShowToneSettings(false)}>Annuler</button>
-              <button className="btn btn-primary" onClick={() => {
-                setToneExamples(settingsDraft);
-                localStorage.setItem("tone_examples_gabin",     JSON.stringify(settingsDraft.gabin     || {}));
-                localStorage.setItem("tone_examples_cotesushi", JSON.stringify(settingsDraft.cotesushi || {}));
-                setShowToneSettings(false);
-                showToast("Exemples sauvegardés ✓", "success");
-              }}>Sauvegarder</button>
-            </div>
-
-          </div>
-        </div>
-      )}
 
       {showPanel && selectedReview && (
 
@@ -1074,15 +1039,7 @@ export default function ReviewsHub() {
 
             <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c5cfc", animation: "pulse 1.5s infinite" }} />
-              <span style={{ flex: 1 }}>Ton de la réponse</span>
-              <button
-                title="Configurer les exemples par ton"
-                onClick={() => {
-                  setSettingsDraft(JSON.parse(JSON.stringify(toneExamples)));
-                  setShowToneSettings(true);
-                }}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#5a5968", fontSize: 14, padding: "2px 4px", borderRadius: 4, lineHeight: 1 }}
-              >⚙</button>
+              Ton de la réponse
             </div>
 
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -1617,6 +1574,79 @@ export default function ReviewsHub() {
 
             </div></>}
 
+            {activeNav === "settings" && (
+              <div style={{ maxWidth: 640, padding: "8px 0 32px" }}>
+
+                <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 20, lineHeight: 1.7 }}>
+                  Ces réglages s&apos;appliquent à toutes les générations IA. Les exemples guident le style ; les consignes sont des règles strictes.
+                </div>
+
+                <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+                  {([{ key: "gabin", label: "Gabin" }, { key: "cotesushi", label: "Côté Sushi" }] as { key: "gabin" | "cotesushi"; label: string }[]).map(({ key, label }) => (
+                    <button key={key} className={`pill${settingsTab === key ? " active" : ""}`} onClick={() => setSettingsTab(key)}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#eeedf4", marginBottom: 4 }}>Consignes IA</div>
+                    <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 10, lineHeight: 1.6 }}>
+                      Ce que l&apos;IA doit ou ne doit pas dire (ex : &ldquo;Ne jamais mentionner les prix&rdquo;, &ldquo;Toujours proposer de recontacter par email&rdquo;).
+                    </div>
+                    <textarea
+                      className="input-field"
+                      rows={4}
+                      placeholder={"Ex : Ne jamais mentionner les concurrents. Toujours signer avec “La Team”. Proposer de revenir en cas d’insatisfaction."}
+                      value={instructionsDraft[settingsTab] || ""}
+                      onChange={(e) => setInstructionsDraft((prev) => ({ ...prev, [settingsTab]: e.target.value }))}
+                      style={{ resize: "vertical" }}
+                    />
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#eeedf4", marginBottom: 4 }}>Exemples de réponses par ton</div>
+                    <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 14, lineHeight: 1.6 }}>
+                      Collez des réponses publiées pour chaque ton — l&apos;IA s&apos;en inspirera pour reproduire le style.
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                      {(["professionnel", "empathique", "concis", "friendly"] as Tone[]).map((t) => (
+                        <div key={t}>
+                          <div style={{ fontSize: 12, color: "#a78bfa", fontWeight: 600, marginBottom: 6, textTransform: "capitalize" }}>{t}</div>
+                          <textarea
+                            className="input-field"
+                            rows={3}
+                            placeholder={`Exemples de réponses publiées en mode « ${t} »…`}
+                            value={settingsDraft[settingsTab]?.[t] || ""}
+                            onChange={(e) => setSettingsDraft((prev) => ({
+                              ...prev,
+                              [settingsTab]: { ...prev[settingsTab], [t]: e.target.value },
+                            }))}
+                            style={{ resize: "vertical" }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <button className="btn btn-primary" style={{ padding: "10px 24px" }} onClick={() => {
+                      setToneExamples(settingsDraft);
+                      setAiInstructions(instructionsDraft);
+                      localStorage.setItem("tone_examples_gabin",     JSON.stringify(settingsDraft.gabin     || {}));
+                      localStorage.setItem("tone_examples_cotesushi", JSON.stringify(settingsDraft.cotesushi || {}));
+                      localStorage.setItem("ai_instructions_gabin",     instructionsDraft.gabin     || "");
+                      localStorage.setItem("ai_instructions_cotesushi", instructionsDraft.cotesushi || "");
+                      showToast("Paramètres sauvegardés ✓", "success");
+                    }}>Sauvegarder</button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
           </div>
 
         </div>
@@ -1680,16 +1710,7 @@ export default function ReviewsHub() {
 
                     <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c5cfc", animation: "pulse 1.5s infinite" }} />
 
-                    <span style={{ flex: 1 }}>Ton de la réponse</span>
-
-                    <button
-                      title="Configurer les exemples par ton"
-                      onClick={() => {
-                        setSettingsDraft(JSON.parse(JSON.stringify(toneExamples)));
-                        setShowToneSettings(true);
-                      }}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#5a5968", fontSize: 14, padding: "2px 4px", borderRadius: 4, lineHeight: 1 }}
-                    >⚙</button>
+                    Ton de la réponse
 
                   </div>
 
