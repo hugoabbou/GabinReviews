@@ -118,7 +118,10 @@ export default function ReviewsHub() {
   const [generating, setGenerating]         = useState(false);
 
 
-  const [toneExamples, setToneExamples]     = useState<Record<string, string>>({});
+  const [toneExamples, setToneExamples]     = useState<Record<string, Record<Tone, string>>>({});
+  const [showToneSettings, setShowToneSettings] = useState(false);
+  const [settingsTab, setSettingsTab]       = useState<"gabin" | "cotesushi">("gabin");
+  const [settingsDraft, setSettingsDraft]   = useState<Record<string, Record<Tone, string>>>({});
 
 
   const [toast, setToast]                   = useState<{ msg: string; type: "error" | "success" | "info" } | null>(null);
@@ -170,9 +173,14 @@ export default function ReviewsHub() {
   useEffect(() => {
     // Charge les exemples depuis le serveur
     fetch("/api/config").then((r) => r.json()).then((data) => {
+      const defaultTones = (apiText: string): Record<Tone, string> => ({
+        professionnel: "", empathique: "", concis: "", friendly: apiText,
+      });
+      const savedGabin      = localStorage.getItem("tone_examples_gabin");
+      const savedCotesushi  = localStorage.getItem("tone_examples_cotesushi");
       setToneExamples({
-        gabin: data.toneExamplesGabin || "",
-        cotesushi: data.toneExamplesCoteSushi || "",
+        gabin:     savedGabin     ? JSON.parse(savedGabin)     : defaultTones(data.toneExamplesGabin     || ""),
+        cotesushi: savedCotesushi ? JSON.parse(savedCotesushi) : defaultTones(data.toneExamplesCoteSushi || ""),
       });
     });
 
@@ -667,7 +675,7 @@ export default function ReviewsHub() {
       .map((r) => `Avis: "${r.comment}" → Réponse: "${r.reply}"`)
       .join("\n");
     const etabKey = reviewEtab.name.toLowerCase().includes("sushi") ? "cotesushi" : "gabin";
-    const exampleText = googleReplies || (toneExamples[etabKey] || "").trim();
+    const exampleText = googleReplies || (toneExamples[etabKey]?.[tone] || "").trim();
 
     const styleContext = exampleText
       ? `\n\nVoici des exemples de réponses déjà publiées, adopte exactement le même style, ton et vocabulaire :\n${exampleText}`
@@ -978,6 +986,61 @@ export default function ReviewsHub() {
 
 
 
+      {showToneSettings && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowToneSettings(false); }}>
+          <div className="modal" style={{ width: 520, maxWidth: "95vw", maxHeight: "85vh", display: "flex", flexDirection: "column", gap: 0 }}>
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 15, fontWeight: 600 }}>⚙ Exemples par ton</div>
+              <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 13 }} onClick={() => setShowToneSettings(false)}>✕</button>
+            </div>
+
+            <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 14, lineHeight: 1.6 }}>
+              Ces exemples guident l&apos;IA pour adopter le bon style. Collez des réponses publiées en exemple.
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              {([{ key: "gabin", label: "Gabin" }, { key: "cotesushi", label: "Côté Sushi" }] as { key: "gabin" | "cotesushi"; label: string }[]).map(({ key, label }) => (
+                <button key={key} className={`pill${settingsTab === key ? " active" : ""}`} onClick={() => setSettingsTab(key)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
+              {(["professionnel", "empathique", "concis", "friendly"] as Tone[]).map((t) => (
+                <div key={t}>
+                  <div style={{ fontSize: 12, color: "#a78bfa", fontWeight: 600, marginBottom: 6, textTransform: "capitalize" }}>{t}</div>
+                  <textarea
+                    className="input-field"
+                    rows={3}
+                    placeholder={`Exemples de réponses publiées en mode « ${t} »…`}
+                    value={settingsDraft[settingsTab]?.[t] || ""}
+                    onChange={(e) => setSettingsDraft((prev) => ({
+                      ...prev,
+                      [settingsTab]: { ...prev[settingsTab], [t]: e.target.value },
+                    }))}
+                    style={{ resize: "vertical" }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 18, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+              <button className="btn btn-ghost" onClick={() => setShowToneSettings(false)}>Annuler</button>
+              <button className="btn btn-primary" onClick={() => {
+                setToneExamples(settingsDraft);
+                localStorage.setItem("tone_examples_gabin",     JSON.stringify(settingsDraft.gabin     || {}));
+                localStorage.setItem("tone_examples_cotesushi", JSON.stringify(settingsDraft.cotesushi || {}));
+                setShowToneSettings(false);
+                showToast("Exemples sauvegardés ✓", "success");
+              }}>Sauvegarder</button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {showPanel && selectedReview && (
 
         <div className="mobile-panel">
@@ -1008,6 +1071,19 @@ export default function ReviewsHub() {
                 <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(238,237,244,0.75)" }}>{selectedReview.reply}</div>
               </div>
             )}
+
+            <div style={{ fontSize: 12, color: "#7c7b89", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c5cfc", animation: "pulse 1.5s infinite" }} />
+              <span style={{ flex: 1 }}>Ton de la réponse</span>
+              <button
+                title="Configurer les exemples par ton"
+                onClick={() => {
+                  setSettingsDraft(JSON.parse(JSON.stringify(toneExamples)));
+                  setShowToneSettings(true);
+                }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#5a5968", fontSize: 14, padding: "2px 4px", borderRadius: 4, lineHeight: 1 }}
+              >⚙</button>
+            </div>
 
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
 
@@ -1604,7 +1680,16 @@ export default function ReviewsHub() {
 
                     <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c5cfc", animation: "pulse 1.5s infinite" }} />
 
-                    Ton de la réponse
+                    <span style={{ flex: 1 }}>Ton de la réponse</span>
+
+                    <button
+                      title="Configurer les exemples par ton"
+                      onClick={() => {
+                        setSettingsDraft(JSON.parse(JSON.stringify(toneExamples)));
+                        setShowToneSettings(true);
+                      }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#5a5968", fontSize: 14, padding: "2px 4px", borderRadius: 4, lineHeight: 1 }}
+                    >⚙</button>
 
                   </div>
 
