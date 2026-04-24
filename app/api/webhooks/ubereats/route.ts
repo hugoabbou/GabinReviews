@@ -27,10 +27,37 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log("Uber Eats webhook event_type:", body.event_type);
 
+    // Order notification — new order incoming
+    if (body.event_type === "eats.order.scheduled" || body.event_type === "eats.order.notification" || body.event_type === "orders.notification") {
+      const orderId = body.order_id || body.meta?.resource_id;
+      console.log("Order notification received, order_id:", orderId);
+      try {
+        if (orderId) {
+          const orderStore = getStore("ubereats-orders");
+          const existing = await orderStore.get(orderId, { type: "text" }).catch(() => null);
+          if (!existing) {
+            await orderStore.set(orderId, JSON.stringify({ order_id: orderId, status: "pending", received_at: new Date().toISOString() }));
+          }
+        }
+      } catch {}
+    }
+
+    // Order cancelled
+    if (body.event_type === "eats.order.cancelled" || body.event_type === "orders.cancel") {
+      const orderId = body.order_id || body.meta?.resource_id;
+      console.log("Order cancelled, order_id:", orderId);
+      try {
+        if (orderId) {
+          const orderStore = getStore("ubereats-orders");
+          await orderStore.set(orderId, JSON.stringify({ order_id: orderId, status: "cancelled", cancelled_at: new Date().toISOString() }));
+        }
+      } catch {}
+    }
+
+    // Report ready
     if (body.event_type === "eats.report.success" && body.report_metadata?.sections?.length) {
       const jobId = body.job_id;
 
-      // Look up store_id from job_id mapping
       let storeId = "";
       try {
         const jobStore = getStore("ubereats-jobs");
