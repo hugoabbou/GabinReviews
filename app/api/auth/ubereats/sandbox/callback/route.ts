@@ -45,7 +45,7 @@ export async function GET(req: Request) {
   const storesR = await apiCall(token, "GET", "/v1/eats/stores");
   results["get_stores"] = { status: storesR.status };
   const userStores = (storesR.data as { stores?: { store_id: string }[] })?.stores?.map(s => s.store_id) ?? [];
-  const allStoreIds = [...new Set([...userStores, ...STORES])];
+  const allStoreIds = Array.from(new Set([...userStores, ...STORES]));
 
   // Create a sandbox test order on the first store that accepts it
   let orderId: string | null = null;
