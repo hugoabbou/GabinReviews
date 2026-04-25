@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getStore, listStores } from "@netlify/blobs";
+import { getStore } from "@netlify/blobs";
 
 export async function GET() {
   try {
