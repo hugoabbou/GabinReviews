@@ -36,7 +36,7 @@ export async function GET(req: Request) {
   const code = searchParams.get("code");
   if (!code) return NextResponse.json({ error: "No authorization code" }, { status: 400 });
 
-  // Exchange code for user-scoped token
+  // User token (eats.pos_provisioning) — for management endpoints
   const tokenRes = await fetch(SANDBOX_AUTH, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -52,46 +52,62 @@ export async function GET(req: Request) {
   const userToken: string = tokenData.access_token;
   if (!userToken) return NextResponse.json({ error: "Token exchange failed", details: tokenData }, { status: 400 });
 
-  const results: Record<string, unknown> = { token_ok: true, scopes: tokenData.scope };
+  const results: Record<string, unknown> = { user_token_ok: true, user_scopes: tokenData.scope };
 
-  // Get stores accessible to this user
+  // Client credentials token — for read endpoints (eats.order, eats.store.orders.read)
+  const ccToken = await getClientCredToken();
+  results["cc_token_ok"] = !!ccToken;
+
+  // Get stores with user token
   const storesR   = await apiCall(userToken, "GET", "/v1/eats/stores");
   const storeList = (storesR.data as { stores?: { store_id: string }[] })?.stores ?? [];
   results["get_stores"] = { status: storesR.status, count: storeList.length };
 
-  // Get client_credentials token — has eats.order scope for GET order details
-  const ccToken = await getClientCredToken();
-  results["cc_token_ok"] = !!ccToken;
-
-  // Find created orders using client_credentials token (has eats.store.orders.read)
+  // Search for any existing order across all available listing paths
   let orderId: string | null = null;
+
   if (ccToken) {
     for (const store of storeList) {
-      const r      = await apiCall(ccToken, "GET", `/v1/eats/stores/${store.store_id}/created-orders`);
-      const orders = (r.data as { orders?: { order_id: string }[] })?.orders ?? [];
-      results[`created_orders_${store.store_id.slice(0, 8)}`] = { status: r.status, count: orders.length };
-      if (orders.length > 0 && !orderId) orderId = orders[0].order_id;
+      const sid = store.store_id;
+
+      // Primary: created-orders (new orders awaiting POS acknowledgement)
+      const r1 = await apiCall(ccToken, "GET", `/v1/eats/stores/${sid}/created-orders`);
+      const created = (r1.data as { orders?: { order_id: string }[] })?.orders ?? [];
+      results[`created_orders_${sid.slice(0, 8)}`] = { status: r1.status, count: created.length };
+      if (created.length > 0 && !orderId) orderId = created[0].order_id;
+
+      // Try past orders endpoint
+      const r2 = await apiCall(ccToken, "GET", `/v1/eats/stores/${sid}/orders`);
+      const past = (r2.data as { orders?: { order_id: string }[] })?.orders ?? [];
+      results[`orders_${sid.slice(0, 8)}`] = { status: r2.status, count: past.length, data: r2.data };
+      if (past.length > 0 && !orderId) orderId = past[0].order_id;
     }
+
+    // Try top-level order listing
+    const topOrders = await apiCall(ccToken, "GET", "/v1/eats/orders");
+    results["top_level_orders"] = { status: topOrders.status, data: topOrders.data };
+
+    // Try provisioning endpoint — register our client as POS for Tokyo Crunch (no current POS)
+    const tokyoCrunch = "823e5f0a-2a7b-5b85-95c0-7160a2cecee7";
+    const provR = await apiCall(userToken, "POST", `/v1/eats/stores/${tokyoCrunch}/pos_provisioning`, {});
+    results["provision_tokyo_crunch"] = { status: provR.status, data: provR.data };
+
+    const provR2 = await apiCall(userToken, "PUT", `/v1/eats/stores/${tokyoCrunch}/pos_provisioning`, {});
+    results["provision_tokyo_crunch_put"] = { status: provR2.status, data: provR2.data };
   }
 
   results.order_found = orderId ?? "none";
 
   if (orderId) {
-    // GET order details: use client_credentials token (has eats.order)
+    // GET order details: client_credentials has eats.order
     if (ccToken) {
       results["get_order_details"] = await apiCall(ccToken, "GET", `/v2/eats/order/${orderId}`);
     }
-    // Management endpoints: use user token (has eats.pos_provisioning, or eats.order if granted)
-    const mgmtToken = userToken;
-    results["accept_order"]     = await apiCall(mgmtToken, "POST", `/v2/eats/orders/${orderId}/accept_pos_order`, {});
-    results["mark_order_ready"] = await apiCall(mgmtToken, "POST", `/v2/eats/orders/${orderId}/ready_for_pickup`, {});
-    results["deny_order"]       = await apiCall(mgmtToken, "POST", `/v2/eats/orders/${orderId}/deny_pos_order`, { reason: "ITEM_UNAVAILABLE", invalid_items: [] });
-    results["cancel_order"]     = await apiCall(mgmtToken, "POST", `/v2/eats/orders/${orderId}/cancel`, { reason: "STORE_CLOSED" });
-  } else {
-    // No orders yet — confirm scope status with dummy probe
-    const dummy = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
-    results["scope_check_get_order"] = await apiCall(userToken, "GET",  `/v2/eats/order/${dummy}`);
-    results["scope_check_accept"]    = await apiCall(userToken, "POST", `/v2/eats/orders/${dummy}/accept_pos_order`, {});
+    // Management: user token has eats.pos_provisioning (returns 404 not 401 — scope correct)
+    results["accept_order"]     = await apiCall(userToken, "POST", `/v2/eats/orders/${orderId}/accept_pos_order`, {});
+    results["mark_order_ready"] = await apiCall(userToken, "POST", `/v2/eats/orders/${orderId}/ready_for_pickup`, {});
+    results["deny_order"]       = await apiCall(userToken, "POST", `/v2/eats/orders/${orderId}/deny_pos_order`, { reason: "ITEM_UNAVAILABLE", invalid_items: [] });
+    results["cancel_order"]     = await apiCall(userToken, "POST", `/v2/eats/orders/${orderId}/cancel`, { reason: "STORE_CLOSED" });
   }
 
   return NextResponse.json(results, { status: 200 });
