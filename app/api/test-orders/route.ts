@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 
-const SANDBOX_CLIENT_ID     = "HgCQpYAtiO2DqfoiVQZHLSFN5ipH8GsE";
-const SANDBOX_CLIENT_SECRET = "qxrdpKK8LJj6nJdP8I-f31r7mGaKL17P0wcURXQq";
-const SANDBOX_AUTH          = "https://sandbox-login.uber.com/oauth/v2/token";
-const SANDBOX_API           = "https://test-api.uber.com";
+const SANDBOX_AUTH = "https://sandbox-login.uber.com/oauth/v2/token";
+const SANDBOX_API  = "https://test-api.uber.com";
 
 async function getSandboxToken(): Promise<string> {
   const form = new URLSearchParams({
-    client_id:     SANDBOX_CLIENT_ID,
-    client_secret: SANDBOX_CLIENT_SECRET,
+    client_id:     process.env.UBER_SANDBOX_CLIENT_ID!,
+    client_secret: process.env.UBER_SANDBOX_CLIENT_SECRET!,
     grant_type:    "client_credentials",
     scope:         "eats.order eats.store eats.store.orders.read",
   });

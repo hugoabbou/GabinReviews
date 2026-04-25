@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@netlify/blobs";
 
-const SANDBOX_CLIENT_ID     = "HgCQpYAtiO2DqfoiVQZHLSFN5ipH8GsE";
-const SANDBOX_CLIENT_SECRET = "qxrdpKK8LJj6nJdP8I-f31r7mGaKL17P0wcURXQq";
 
 function parseCSV(text: string): Record<string, string>[] {
   const lines = text.trim().split("\n");
@@ -26,8 +24,8 @@ function parseCSV(text: string): Record<string, string>[] {
 }
 
 async function getToken(sandbox: boolean): Promise<{ token: string; apiBase: string } | null> {
-  const clientId     = sandbox ? (process.env.UBER_SANDBOX_CLIENT_ID     || SANDBOX_CLIENT_ID)     : process.env.UBER_CLIENT_ID!;
-  const clientSecret = sandbox ? (process.env.UBER_SANDBOX_CLIENT_SECRET || SANDBOX_CLIENT_SECRET) : process.env.UBER_CLIENT_SECRET!;
+  const clientId     = sandbox ? process.env.UBER_SANDBOX_CLIENT_ID!     : process.env.UBER_CLIENT_ID!;
+  const clientSecret = sandbox ? process.env.UBER_SANDBOX_CLIENT_SECRET! : process.env.UBER_CLIENT_SECRET!;
   const authUrl      = sandbox ? "https://sandbox-login.uber.com/oauth/v2/token" : "https://auth.uber.com/oauth/v2/token";
   const apiBase      = sandbox ? "https://test-api.uber.com"                     : "https://api.uber.com";
 

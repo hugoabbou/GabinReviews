@@ -3,7 +3,7 @@ command = "rm -rf .next && npx next build"
 publish = ".next"
 
 [build.environment]
-SECRETS_SCAN_OMIT_KEYS = "GOOGLE_CLIENT_ID,UBER_CLIENT_ID"
+SECRETS_SCAN_OMIT_KEYS = "GOOGLE_CLIENT_ID,UBER_CLIENT_ID,UBER_SANDBOX_CLIENT_ID,UBER_SANDBOX_CLIENT_SECRET"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
