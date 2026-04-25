@@ -85,8 +85,8 @@ export async function POST(req: Request) {
       const orderId = body.order_id || body.meta?.resource_id;
       console.log("Order notification received, order_id:", orderId);
       if (orderId) {
-        // Call Get Order Details — required by Uber's integration checklist
-        fetchOrderDetails(orderId).catch((e) => console.error("fetchOrderDetails error:", e));
+        // Must be awaited — serverless functions terminate at return, fire-and-forget would never complete
+        try { await fetchOrderDetails(orderId); } catch (e) { console.error("fetchOrderDetails error:", e); }
       }
     }
 
