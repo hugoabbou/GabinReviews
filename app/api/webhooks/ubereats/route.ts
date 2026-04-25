@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@netlify/blobs";
 
+const SANDBOX_CLIENT_ID     = "HgCQpYAtiO2DqfoiVQZHLSFN5ipH8GsE";
+const SANDBOX_CLIENT_SECRET = "qxrdpKK8LJj6nJdP8I-f31r7mGaKL17P0wcURXQq";
+
 function parseCSV(text: string): Record<string, string>[] {
   const lines = text.trim().split("\n");
   if (lines.length < 2) return [];
@@ -22,28 +25,79 @@ function parseCSV(text: string): Record<string, string>[] {
   });
 }
 
+async function getToken(sandbox: boolean): Promise<{ token: string; apiBase: string } | null> {
+  const clientId     = sandbox ? (process.env.UBER_SANDBOX_CLIENT_ID     || SANDBOX_CLIENT_ID)     : process.env.UBER_CLIENT_ID!;
+  const clientSecret = sandbox ? (process.env.UBER_SANDBOX_CLIENT_SECRET || SANDBOX_CLIENT_SECRET) : process.env.UBER_CLIENT_SECRET!;
+  const authUrl      = sandbox ? "https://sandbox-login.uber.com/oauth/v2/token" : "https://auth.uber.com/oauth/v2/token";
+  const apiBase      = sandbox ? "https://test-api.uber.com"                     : "https://api.uber.com";
+
+  try {
+    const res  = await fetch(authUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id:     clientId,
+        client_secret: clientSecret,
+        grant_type:    "client_credentials",
+        scope:         "eats.order eats.store eats.store.orders.read",
+      }),
+    });
+    const data = await res.json();
+    if (!data.access_token) return null;
+    return { token: data.access_token, apiBase };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchOrderDetails(orderId: string): Promise<void> {
+  // Try sandbox first (test phase), then production
+  const isSandbox = !!(process.env.UBER_SANDBOX_CLIENT_ID || process.env.UBER_SANDBOX_MODE === "true");
+  const creds = await getToken(isSandbox) ?? await getToken(!isSandbox);
+  if (!creds) { console.error("No Uber token available for order details fetch"); return; }
+
+  const res = await fetch(`${creds.apiBase}/v2/eats/order/${orderId}`, {
+    headers: { Authorization: `Bearer ${creds.token}` },
+  });
+  const data = await res.json();
+  console.log("Get Order Details status:", res.status, "order_id:", orderId, JSON.stringify(data).slice(0, 300));
+
+  try {
+    const orderStore = getStore("ubereats-orders");
+    await orderStore.set(orderId, JSON.stringify({
+      order_id:    orderId,
+      status:      "pending",
+      received_at: new Date().toISOString(),
+      details:     data,
+    }));
+  } catch {}
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    console.log("Uber Eats webhook event_type:", body.event_type);
+    console.log("Uber Eats webhook event_type:", body.event_type, "body:", JSON.stringify(body).slice(0, 500));
 
     // Order notification — new order incoming
-    if (body.event_type === "eats.order.scheduled" || body.event_type === "eats.order.notification" || body.event_type === "orders.notification") {
+    if (
+      body.event_type === "eats.order.scheduled"   ||
+      body.event_type === "eats.order.notification" ||
+      body.event_type === "orders.notification"
+    ) {
       const orderId = body.order_id || body.meta?.resource_id;
       console.log("Order notification received, order_id:", orderId);
-      try {
-        if (orderId) {
-          const orderStore = getStore("ubereats-orders");
-          const existing = await orderStore.get(orderId, { type: "text" }).catch(() => null);
-          if (!existing) {
-            await orderStore.set(orderId, JSON.stringify({ order_id: orderId, status: "pending", received_at: new Date().toISOString() }));
-          }
-        }
-      } catch {}
+      if (orderId) {
+        // Call Get Order Details — required by Uber's integration checklist
+        fetchOrderDetails(orderId).catch((e) => console.error("fetchOrderDetails error:", e));
+      }
     }
 
     // Order cancelled
-    if (body.event_type === "eats.order.cancelled" || body.event_type === "orders.cancel") {
+    if (
+      body.event_type === "eats.order.cancelled" ||
+      body.event_type === "eats.order.cancel"    ||
+      body.event_type === "orders.cancel"
+    ) {
       const orderId = body.order_id || body.meta?.resource_id;
       console.log("Order cancelled, order_id:", orderId);
       try {
@@ -65,9 +119,9 @@ export async function POST(req: Request) {
       } catch {}
 
       for (const section of body.report_metadata.sections) {
-        const csvRes = await fetch(section.download_url);
+        const csvRes  = await fetch(section.download_url);
         const csvText = await csvRes.text();
-        const rows = parseCSV(csvText);
+        const rows    = parseCSV(csvText);
         console.log(`Parsed ${rows.length} rows, store: ${storeId}, sample:`, JSON.stringify(rows[0]));
 
         if (rows.length > 0) {
