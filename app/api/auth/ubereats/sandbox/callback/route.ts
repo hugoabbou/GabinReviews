@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 
 const SANDBOX_API = "https://test-api.uber.com";
-const STORES = [
-  "d2c06181-e71a-4ed4-b0bb-06c046a100de",
-  "e3d738e7-fb10-542b-88b4-b2d073ed5e1d",
-  "823e5f0a-2a7b-5b85-95c0-7160a2cecee7",
-];
 
 async function apiCall(token: string, method: string, path: string, body?: unknown) {
   const res = await fetch(`${SANDBOX_API}${path}`, {
@@ -41,35 +36,37 @@ export async function GET(req: Request) {
 
   const results: Record<string, unknown> = { token_ok: true, scopes: tokenData.scope };
 
-  // Get stores accessible to this user
+  // Get stores accessible to this user — log full data to see real store IDs
   const storesR = await apiCall(token, "GET", "/v1/eats/stores");
-  results["get_stores"] = { status: storesR.status };
-  const userStores = (storesR.data as { stores?: { store_id: string }[] })?.stores?.map(s => s.store_id) ?? [];
-  const allStoreIds = Array.from(new Set([...userStores, ...STORES]));
+  const storeList = (storesR.data as { stores?: { store_id: string; name?: string }[] })?.stores ?? [];
+  results["get_stores"] = { status: storesR.status, stores: storeList };
 
-  // Create a sandbox test order on the first store that accepts it
+  const storeIds = storeList.map(s => s.store_id);
+
+  // Try every variant of the sandbox order creation endpoint on each store
   let orderId: string | null = null;
   let usedStoreId: string | null = null;
-  for (const storeId of allStoreIds) {
-    const r = await apiCall(token, "POST", `/v1/eats/sandbox/stores/${storeId}/orders`, {});
-    results[`create_order_${storeId.slice(0, 8)}`] = { status: r.status, data: r.data };
-    const created = (r.data as { order_id?: string; id?: string });
-    const id = created?.order_id ?? created?.id ?? null;
-    if (id && (r.status === 200 || r.status === 201)) {
-      orderId = id;
-      usedStoreId = storeId;
-      break;
-    }
-  }
 
-  // Fallback: check for existing created orders
-  if (!orderId) {
-    for (const storeId of allStoreIds) {
-      const r = await apiCall(token, "GET", `/v1/eats/stores/${storeId}/created-orders`);
-      results[`fallback_created_orders_${storeId.slice(0, 8)}`] = { status: r.status };
-      const orders = (r.data as { orders?: { order_id: string }[] })?.orders ?? [];
-      if (orders.length > 0) { orderId = orders[0].order_id; usedStoreId = storeId; break; }
+  for (const storeId of storeIds) {
+    const paths = [
+      `/v1/eats/sandbox/stores/${storeId}/orders`,
+      `/v1/eats/sandbox/stores/${storeId}/order`,
+      `/v2/eats/sandbox/stores/${storeId}/orders`,
+      `/v1/eats/stores/${storeId}/sandbox/orders`,
+    ];
+    for (const path of paths) {
+      const r = await apiCall(token, "POST", path, {});
+      results[`create_${path.replace(/\//g, "_")}`] = { status: r.status, data: r.data };
+      const id = (r.data as { order_id?: string; id?: string })?.order_id
+              ?? (r.data as { order_id?: string; id?: string })?.id
+              ?? null;
+      if (id && (r.status === 200 || r.status === 201)) {
+        orderId = id;
+        usedStoreId = storeId;
+        break;
+      }
     }
+    if (orderId) break;
   }
 
   results.order_found = orderId ?? "none";
