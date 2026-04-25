@@ -5,6 +5,6 @@ export async function GET() {
   url.searchParams.set("client_id",     process.env.UBER_SANDBOX_CLIENT_ID!);
   url.searchParams.set("redirect_uri",  `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/ubereats/sandbox/callback`);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope",         "eats.pos_provisioning eats.order eats.store.orders.read eats.store.orders.cancel");
+  url.searchParams.set("scope",         "eats.pos_provisioning");
   return NextResponse.redirect(url.toString());
 }
