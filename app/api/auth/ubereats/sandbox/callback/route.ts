@@ -14,7 +14,7 @@ async function apiCall(token: string, method: string, path: string, body?: unkno
   return { status: res.status, data };
 }
 
-async function getClientCredToken(): Promise<{ token: string; scope: string } | null> {
+async function getCC(): Promise<string | null> {
   try {
     const res = await fetch(SANDBOX_AUTH, {
       method:  "POST",
@@ -26,11 +26,16 @@ async function getClientCredToken(): Promise<{ token: string; scope: string } | 
         scope:         "eats.order eats.store eats.store.orders.read eats.store.orders.cancel",
       }),
     });
-    const data = await res.json();
-    if (!data.access_token) return null;
-    return { token: data.access_token, scope: data.scope };
+    const d = await res.json();
+    return d.access_token ?? null;
   } catch { return null; }
 }
+
+const STORE_IDS = [
+  "d2c06181-e71a-4ed4-b0bb-06c046a100de", // Gabin
+  "e3d738e7-fb10-542b-88b4-b2d073ed5e1d", // Côté Sushi
+  "823e5f0a-2a7b-5b85-95c0-7160a2cecee7", // Tokyo Crunch
+];
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -49,54 +54,82 @@ export async function GET(req: Request) {
     }),
   });
   const tokenData = await tokenRes.json();
-  const userToken: string = tokenData.access_token;
-  if (!userToken) return NextResponse.json({ error: "Token exchange failed", details: tokenData }, { status: 400 });
+  const ut: string = tokenData.access_token;
+  if (!ut) return NextResponse.json({ error: "Token exchange failed", details: tokenData }, { status: 400 });
 
-  const cc = await getClientCredToken();
-  const results: Record<string, unknown> = { user_scopes: tokenData.scope };
+  const cc = await getCC();
+  const results: Record<string, unknown> = {};
 
-  // Stores visible to user token (restaurant owner context)
-  const userStoresR = await apiCall(userToken, "GET", "/v1/eats/stores");
-  results["user_stores"] = userStoresR.data;
-
-  // Stores visible to cc token (app context) — may reveal sandbox test stores
+  // ── 1. Try to find the test store via various discovery paths ─────────────
   if (cc) {
-    const ccStoresR = await apiCall(cc.token, "GET", "/v1/eats/stores");
-    results["cc_stores"] = ccStoresR.data;
-
-    // Also try sandbox-specific store listing
-    results["sandbox_stores"] = await apiCall(cc.token, "GET", "/v1/eats/sandbox/stores");
+    results["discover_v2_stores"]        = await apiCall(cc, "GET", "/v2/eats/stores");
+    results["discover_sandbox_stores_v2"] = await apiCall(cc, "GET", "/v2/eats/sandbox/stores");
+    results["discover_test_stores"]      = await apiCall(cc, "GET", "/v1/eats/test/stores");
+    results["discover_sandbox_orders"]   = await apiCall(cc, "GET", "/v1/eats/sandbox/orders");
   }
 
-  // Get all unique store IDs from both contexts
-  const userStoreIds: string[] = ((userStoresR.data as { stores?: { store_id: string }[] })?.stores ?? []).map(s => s.store_id);
-  const ccStoreIds: string[]   = cc ? (((await apiCall(cc.token, "GET", "/v1/eats/stores")).data as { stores?: { store_id: string }[] })?.stores ?? []).map(s => s.store_id) : [];
-  const allIds = Array.from(new Set([...userStoreIds, ...ccStoreIds]));
+  // ── 2. Get menu items for each store (needed for proper order body) ────────
+  for (const storeId of STORE_IDS) {
+    const r = await apiCall(ut, "GET", `/v1/eats/stores/${storeId}/menus`);
+    results[`menu_${storeId.slice(0, 8)}`] = { status: r.status, hasData: !!r.data };
+  }
 
-  // Try sandbox order creation on every store with both tokens
+  // ── 3. Try sandbox order creation with different body formats ──────────────
   let orderId: string | null = null;
-  for (const storeId of allIds) {
-    const r1 = await apiCall(userToken, "POST", `/v1/eats/sandbox/stores/${storeId}/orders`, {});
-    results[`create_user_${storeId.slice(0, 8)}`] = { status: r1.status, data: r1.data };
-    const id1 = (r1.data as { order_id?: string })?.order_id ?? null;
-    if (id1 && !orderId) orderId = id1;
+  for (const storeId of STORE_IDS) {
+    const bodies = [
+      undefined,                                                    // no body
+      {},                                                           // empty object
+      { store_id: storeId },
+      { workflow_uuid: crypto.randomUUID() },
+      { order_type: "PICK_UP" },
+      { request_type: "DELIVERY" },
+      { payment_method: "UBER_PAY" },
+      { test: true },
+    ];
+    for (const body of bodies) {
+      const r = await apiCall(ut, "POST", `/v1/eats/sandbox/stores/${storeId}/orders`, body);
+      if (r.status === 200 || r.status === 201) {
+        const id = (r.data as { order_id?: string })?.order_id ?? null;
+        results[`created_order_${storeId.slice(0, 8)}`] = { status: r.status, data: r.data };
+        if (id) { orderId = id; break; }
+      }
+    }
+    if (orderId) break;
 
-    if (!orderId && cc) {
-      const r2 = await apiCall(cc.token, "POST", `/v1/eats/sandbox/stores/${storeId}/orders`, {});
-      results[`create_cc_${storeId.slice(0, 8)}`] = { status: r2.status, data: r2.data };
-      const id2 = (r2.data as { order_id?: string })?.order_id ?? null;
-      if (id2) orderId = id2;
+    // Also try with cc token
+    if (cc) {
+      const r2 = await apiCall(cc, "POST", `/v1/eats/sandbox/stores/${storeId}/orders`, {});
+      if (r2.status === 200 || r2.status === 201) {
+        const id = (r2.data as { order_id?: string })?.order_id ?? null;
+        results[`created_order_cc_${storeId.slice(0, 8)}`] = { status: r2.status, data: r2.data };
+        if (id) { orderId = id; break; }
+      }
+    }
+  }
+
+  // ── 4. Check created-orders ────────────────────────────────────────────────
+  if (!orderId) {
+    for (const storeId of STORE_IDS) {
+      const t = cc ?? ut;
+      const r = await apiCall(t, "GET", `/v1/eats/stores/${storeId}/created-orders`);
+      const orders = (r.data as { orders?: { order_id: string }[] })?.orders ?? [];
+      results[`created_orders_${storeId.slice(0, 8)}`] = { status: r.status, count: orders.length };
+      if (orders.length > 0 && !orderId) orderId = orders[0].order_id;
     }
   }
 
   results.order_found = orderId ?? "none";
 
-  if (orderId && cc) {
-    results["1_get_order_details"] = await apiCall(cc.token,   "GET",  `/v2/eats/order/${orderId}`);
-    results["2_accept_order"]      = await apiCall(userToken,  "POST", `/v2/eats/orders/${orderId}/accept_pos_order`, {});
-    results["3_mark_order_ready"]  = await apiCall(userToken,  "POST", `/v2/eats/orders/${orderId}/ready_for_pickup`, {});
-    results["4_deny_order"]        = await apiCall(userToken,  "POST", `/v2/eats/orders/${orderId}/deny_pos_order`, { reason: "ITEM_UNAVAILABLE", invalid_items: [] });
-    results["5_cancel_order"]      = await apiCall(userToken,  "POST", `/v2/eats/orders/${orderId}/cancel`, { reason: "STORE_CLOSED" });
+  // ── 5. Call all 6 required endpoints ──────────────────────────────────────
+  if (orderId) {
+    results["1_get_order_details"] = cc
+      ? await apiCall(cc, "GET", `/v2/eats/order/${orderId}`)
+      : { skipped: "no cc token" };
+    results["2_accept_order"]     = await apiCall(ut, "POST", `/v2/eats/orders/${orderId}/accept_pos_order`, {});
+    results["3_mark_order_ready"] = await apiCall(ut, "POST", `/v2/eats/orders/${orderId}/ready_for_pickup`, {});
+    results["4_deny_order"]       = await apiCall(ut, "POST", `/v2/eats/orders/${orderId}/deny_pos_order`, { reason: "ITEM_UNAVAILABLE", invalid_items: [] });
+    results["5_cancel_order"]     = await apiCall(ut, "POST", `/v2/eats/orders/${orderId}/cancel`, { reason: "STORE_CLOSED" });
   }
 
   return NextResponse.json(results, { status: 200 });
