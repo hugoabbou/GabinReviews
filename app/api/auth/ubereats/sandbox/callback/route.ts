@@ -11,7 +11,7 @@ async function apiCall(token: string, method: string, path: string, body?: unkno
   const res = await fetch(`${SANDBOX_API}${path}`, {
     method,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: body ? JSON.stringify(body) : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   let data: unknown;
   try { data = await res.json(); } catch { data = null; }
@@ -39,25 +39,48 @@ export async function GET(req: Request) {
   const token: string = tokenData.access_token;
   if (!token) return NextResponse.json({ error: "Token exchange failed", details: tokenData }, { status: 400 });
 
-  // Find created orders across all stores
   const results: Record<string, unknown> = { token_ok: true, scopes: tokenData.scope };
-  let orderId: string | null = null;
 
-  for (const storeId of STORES) {
-    const r = await apiCall(token, "GET", `/v1/eats/stores/${storeId}/created-orders`);
-    results[`created_orders_${storeId.slice(0, 8)}`] = { status: r.status, orders: (r.data as { orders?: unknown[] })?.orders?.length ?? 0 };
-    const orders = (r.data as { orders?: { order_id: string }[] })?.orders ?? [];
-    if (orders.length > 0 && !orderId) orderId = orders[0].order_id;
+  // Get stores accessible to this user
+  const storesR = await apiCall(token, "GET", "/v1/eats/stores");
+  results["get_stores"] = { status: storesR.status };
+  const userStores = (storesR.data as { stores?: { store_id: string }[] })?.stores?.map(s => s.store_id) ?? [];
+  const allStoreIds = [...new Set([...userStores, ...STORES])];
+
+  // Create a sandbox test order on the first store that accepts it
+  let orderId: string | null = null;
+  let usedStoreId: string | null = null;
+  for (const storeId of allStoreIds) {
+    const r = await apiCall(token, "POST", `/v1/eats/sandbox/stores/${storeId}/orders`, {});
+    results[`create_order_${storeId.slice(0, 8)}`] = { status: r.status, data: r.data };
+    const created = (r.data as { order_id?: string; id?: string });
+    const id = created?.order_id ?? created?.id ?? null;
+    if (id && (r.status === 200 || r.status === 201)) {
+      orderId = id;
+      usedStoreId = storeId;
+      break;
+    }
+  }
+
+  // Fallback: check for existing created orders
+  if (!orderId) {
+    for (const storeId of allStoreIds) {
+      const r = await apiCall(token, "GET", `/v1/eats/stores/${storeId}/created-orders`);
+      results[`fallback_created_orders_${storeId.slice(0, 8)}`] = { status: r.status };
+      const orders = (r.data as { orders?: { order_id: string }[] })?.orders ?? [];
+      if (orders.length > 0) { orderId = orders[0].order_id; usedStoreId = storeId; break; }
+    }
   }
 
   results.order_found = orderId ?? "none";
+  results.store_used  = usedStoreId ?? "none";
 
   if (orderId) {
-    results["get_order_details"]   = await apiCall(token, "GET",  `/v2/eats/order/${orderId}`);
-    results["accept_order"]        = await apiCall(token, "POST", `/v2/eats/orders/${orderId}/accept_pos_order`, {});
-    results["mark_order_ready"]    = await apiCall(token, "POST", `/v2/eats/orders/${orderId}/ready_for_pickup`, {});
-    results["cancel_order"]        = await apiCall(token, "POST", `/v2/eats/orders/${orderId}/cancel`, { reason: "STORE_CLOSED" });
-    results["deny_order_note"]     = "Deny Order skipped — cannot deny an already accepted order";
+    results["get_order_details"] = await apiCall(token, "GET",  `/v2/eats/order/${orderId}`);
+    results["accept_order"]      = await apiCall(token, "POST", `/v2/eats/orders/${orderId}/accept_pos_order`, {});
+    results["mark_order_ready"]  = await apiCall(token, "POST", `/v2/eats/orders/${orderId}/ready_for_pickup`, {});
+    results["deny_order"]        = await apiCall(token, "POST", `/v2/eats/orders/${orderId}/deny_pos_order`, { reason: "ITEM_UNAVAILABLE", invalid_items: [] });
+    results["cancel_order"]      = await apiCall(token, "POST", `/v2/eats/orders/${orderId}/cancel`, { reason: "STORE_CLOSED" });
   }
 
   return NextResponse.json(results, { status: 200 });
